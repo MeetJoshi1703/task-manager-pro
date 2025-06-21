@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useBoardStore } from '../store/boardStore';
 import BoardList from '../components/BoardList';
+import TopBar from '../components/TopBar';
 
 const BoardView: React.FC = () => {
   const { 
@@ -25,41 +26,13 @@ const BoardView: React.FC = () => {
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-      {/* Header */}
-      <header className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-40`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo and Title */}
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                TaskBoard Pro
-              </h1>
-              <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">Beta</span>
-            </div>
-            
-            {/* Header Actions */}
-            <div className="flex items-center space-x-4">
-              {/* Dark Mode Toggle */}
-              <button
-                onClick={() => setIsDarkMode(!isDarkMode)}
-                className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
-                title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-              >
-                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
-              
-              {/* New Board Button */}
-              <button
-                onClick={() => setShowNewBoardModal(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>New Board</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <TopBar 
+        title="My Boards"
+        subtitle="Manage your projects and collaborate with your team"
+        showSearch={true}
+        showViewToggle={true}
+        showFilters={true}
+      />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

@@ -3,6 +3,11 @@ import { X, Save, Tag } from 'lucide-react';
 import { useBoardStore } from './store/boardStore';
 import BoardView from './pages/BoardView';
 import BoardDetail from './pages/BoardDetail';
+import Dashboard from './pages/Dashboard';
+import Calendar from './pages/Calendar';
+import TeamMembers from './pages/TeamMembers'; // Add this import
+import MyTasks from './pages/MyTasks'; // Add this import
+import Sidebar from './components/Sidebar';
 import type { CreateBoardData, CreateTaskData, CreateColumnData } from './types/types';
 
 const App: React.FC = () => {
@@ -22,6 +27,8 @@ const App: React.FC = () => {
     createColumn,
     users
   } = useBoardStore();
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // New Board Modal
   const NewBoardModal = () => {
@@ -70,7 +77,7 @@ const App: React.FC = () => {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-xl max-w-md w-full`}>
+        <div className={`${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white'} rounded-xl shadow-xl max-w-md w-full`}>
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold">Create New Board</h2>
@@ -448,8 +455,27 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="font-sans">
-      {currentView === 'boards' ? <BoardView /> : <BoardDetail />}
+    <div className={`font-sans flex h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Sidebar */}
+      <Sidebar 
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
+      
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Main Pages */}
+        <div className="flex-1 overflow-auto">
+          {currentView === 'dashboard' && <Dashboard />}
+          {currentView === 'boards' && <BoardView />}
+          {currentView === 'board-detail' && <BoardDetail />}
+          {currentView === 'calendar' && <Calendar />}
+          {currentView === 'team' && <TeamMembers />}
+          {currentView === 'tasks' && <MyTasks />}
+        </div>
+      </div>
+      
+      {/* Modals */}
       <NewBoardModal />
       <NewTaskModal />
       <NewColumnModal />

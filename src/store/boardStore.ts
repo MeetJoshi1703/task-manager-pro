@@ -4,7 +4,7 @@ import type { Board, Task, Column, User, CreateBoardData, CreateTaskData, Create
 interface BoardStore {
   // State
   boards: Board[];
-  currentView: 'boards' | 'board-detail';
+  currentView: 'dashboard' | 'boards' | 'board-detail' | 'calendar' | 'team' | 'tasks';
   selectedBoard: Board | null;
   viewMode: 'grid' | 'list';
   searchTerm: string;
@@ -19,7 +19,7 @@ interface BoardStore {
   selectedColumn: string;
 
   // Actions
-  setCurrentView: (view: 'boards' | 'board-detail') => void;
+  setCurrentView: (view: 'dashboard' | 'boards' | 'board-detail' | 'calendar' | 'team' | 'tasks') => void;
   setSelectedBoard: (board: Board | null) => void;
   setViewMode: (mode: 'grid' | 'list') => void;
   setSearchTerm: (term: string) => void;
@@ -45,7 +45,8 @@ interface BoardStore {
   createColumn: (boardId: string, columnData: CreateColumnData) => void;
   updateColumn: (columnId: string, updates: Partial<Column>) => void;
   deleteColumn: (columnId: string) => void;
-  
+  reorderColumns: (boardId: string, fromIndex: number, toIndex: number) => void; 
+
   // Utility functions
   getFilteredBoards: () => Board[];
   starBoard: (boardId: string) => void;
@@ -188,12 +189,12 @@ const initialUsers: User[] = [
 export const useBoardStore = create<BoardStore>((set, get) => ({
   // Initial State
   boards: initialBoards,
-  currentView: 'boards',
+  currentView: 'dashboard',
   selectedBoard: null,
   viewMode: 'grid',
   searchTerm: '',
   filterPriority: 'all',
-  isDarkMode: false,
+  isDarkMode: true,
   users: initialUsers,
   
   // Modal states
@@ -396,30 +397,36 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   },
 
   // Column CRUD
-  createColumn: (boardId, columnData) => {
-    const newColumn: Column = {
-      id: `col-${Date.now()}`,
-      title: columnData.title,
-      boardId,
-      order: 0,
-      color: columnData.color,
-      tasks: []
-    };
+createColumn: (boardId, columnData) => {
+  const newColumn: Column = {
+    id: `col-${Date.now()}`,
+    title: columnData.title,
+    boardId,
+    order: 0,
+    color: columnData.color || 'bg-gray-100',
+    tasks: []
+  };
 
-    set((state) => ({
-      boards: state.boards.map(board => {
-        if (board.id === boardId) {
-          return {
-            ...board,
-            columns: [...board.columns, { ...newColumn, order: board.columns.length }]
-          };
-        }
-        return board;
-      }),
+  set((state) => {
+    const updatedBoards = state.boards.map(board => {
+      if (board.id === boardId) {
+        return {
+          ...board,
+          columns: [...board.columns, { ...newColumn, order: board.columns.length }]
+        };
+      }
+      return board;
+    });
+
+    return {
+      boards: updatedBoards,
+      selectedBoard: state.selectedBoard?.id === boardId 
+        ? updatedBoards.find(b => b.id === boardId) || state.selectedBoard
+        : state.selectedBoard,
       showNewColumnModal: false
-    }));
-  },
-
+    };
+  });
+},
   updateColumn: (columnId, updates) => {
     set((state) => ({
       boards: state.boards.map(board => ({
@@ -439,7 +446,39 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       }))
     }));
   },
+reorderColumns: (boardId, fromIndex, toIndex) => {
+  set((state) => {
+    const updatedBoards = state.boards.map(board => {
+      if (board.id === boardId) {
+        const newColumns = [...board.columns];
+        
+        // Remove the dragged column and insert it at the new position
+        const [draggedColumn] = newColumns.splice(fromIndex, 1);
+        newColumns.splice(toIndex, 0, draggedColumn);
+        
+        // Update the order property for all columns
+        const reorderedColumns = newColumns.map((column, index) => ({
+          ...column,
+          order: index
+        }));
 
+        return {
+          ...board,
+          columns: reorderedColumns,
+          updatedAt: new Date().toISOString().split('T')[0]
+        };
+      }
+      return board;
+    });
+
+    return {
+      boards: updatedBoards,
+      selectedBoard: state.selectedBoard?.id === boardId 
+        ? updatedBoards.find(b => b.id === boardId) || state.selectedBoard
+        : state.selectedBoard
+    };
+  });
+},
   // Utility functions
   getFilteredBoards: () => {
     const { boards, searchTerm, filterPriority } = get();
