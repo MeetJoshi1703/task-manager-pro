@@ -13,7 +13,22 @@ export interface Notification {
   boardId?: string;
 }
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  role: 'admin' | 'member' | 'viewer';
+  joinedAt: string;
+}
+
 interface BoardStore {
+  // Auth State
+  isAuthenticated: boolean;
+  currentUser: AuthUser | null;
+  showAuthModal: boolean;
+  authMode: 'login' | 'signup';
+
   // State
   boards: Board[];
   currentView: 'dashboard' | 'boards' | 'board-detail' | 'calendar' | 'team' | 'tasks' | 'notifications' | 'settings';
@@ -25,19 +40,25 @@ interface BoardStore {
   users: User[];
   notifications: Notification[];
 
-
   // Modal states
   showNewBoardModal: boolean;
   showNewTaskModal: boolean;
   showNewColumnModal: boolean;
   selectedColumn: string;
 
+  // Auth Actions
+  setShowAuthModal: (show: boolean) => void;
+  setAuthMode: (mode: 'login' | 'signup') => void;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginAsDemo: () => void;
+  logout: () => void;
+
   // Notification actions
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
   deleteNotification: (notificationId: string) => void;
   getUnreadNotificationCount: () => number;
-
 
   // Actions
   setCurrentView: (view: 'dashboard' | 'boards' | 'board-detail' | 'calendar' | 'team' | 'tasks' | 'notifications' | 'settings') => void;
@@ -78,10 +99,10 @@ const initialBoards: Board[] = [
     id: '1',
     title: 'Product Launch Q2',
     description: 'Coordinating all activities for the upcoming product launch',
-    createdBy: 'Sarah Johnson',
+    createdBy: 'John Doe',
     createdAt: '2024-01-15',
     updatedAt: '2024-06-10',
-    members: ['Sarah Johnson', 'Mike Chen', 'Emma Davis'],
+    members: ['John Doe', 'Sarah Johnson', 'Mike Chen'],
     taskCount: 24,
     completedTasks: 18,
     priority: 'high',
@@ -99,8 +120,8 @@ const initialBoards: Board[] = [
             id: 'task-1',
             title: 'Design Landing Page',
             description: 'Create mockups for the new product landing page with modern design',
-            createdBy: 'Sarah Johnson',
-            assignedTo: ['Emma Davis'],
+            createdBy: 'John Doe',
+            assignedTo: ['Sarah Johnson'],
             priority: 'high',
             dueDate: '2024-06-20',
             tags: ['Design', 'UI/UX'],
@@ -153,8 +174,8 @@ const initialBoards: Board[] = [
             id: 'task-3',
             title: 'Market Research',
             description: 'Comprehensive analysis of competitor products and pricing',
-            createdBy: 'Sarah Johnson',
-            assignedTo: ['Sarah Johnson'],
+            createdBy: 'John Doe',
+            assignedTo: ['John Doe'],
             priority: 'medium',
             dueDate: '2024-06-15',
             tags: ['Research', 'Marketing'],
@@ -174,7 +195,7 @@ const initialBoards: Board[] = [
     createdBy: 'Mike Chen',
     createdAt: '2024-02-01',
     updatedAt: '2024-06-12',
-    members: ['Mike Chen', 'Emma Davis', 'John Smith'],
+    members: ['Mike Chen', 'Sarah Johnson', 'John Smith'],
     taskCount: 16,
     completedTasks: 8,
     priority: 'medium',
@@ -186,10 +207,10 @@ const initialBoards: Board[] = [
     id: '3',
     title: 'Mobile App Development',
     description: 'Native mobile application for iOS and Android platforms',
-    createdBy: 'Emma Davis',
+    createdBy: 'Sarah Johnson',
     createdAt: '2024-03-10',
     updatedAt: '2024-06-11',
-    members: ['Emma Davis', 'Alex Wilson'],
+    members: ['Sarah Johnson', 'Alex Wilson'],
     taskCount: 32,
     completedTasks: 12,
     priority: 'high',
@@ -200,12 +221,21 @@ const initialBoards: Board[] = [
 ];
 
 const initialUsers: User[] = [
-  { id: '1', name: 'Sarah Johnson', email: 'sarah@company.com', avatar: '👩‍💼' },
-  { id: '2', name: 'Mike Chen', email: 'mike@company.com', avatar: '👨‍💻' },
-  { id: '3', name: 'Emma Davis', email: 'emma@company.com', avatar: '👩‍🎨' },
-  { id: '4', name: 'John Smith', email: 'john@company.com', avatar: '👨‍💼' },
+  { id: '1', name: 'John Doe', email: 'john@company.com', avatar: '👨‍💼' },
+  { id: '2', name: 'Sarah Johnson', email: 'sarah@company.com', avatar: '👩‍💼' },
+  { id: '3', name: 'Mike Chen', email: 'mike@company.com', avatar: '👨‍💻' },
+  { id: '4', name: 'Emma Davis', email: 'emma@company.com', avatar: '👩‍🎨' },
   { id: '5', name: 'Alex Wilson', email: 'alex@company.com', avatar: '👨‍🔬' }
 ];
+
+const demoUser: AuthUser = {
+  id: '1',
+  name: 'John Doe',
+  email: 'john@company.com',
+  avatar: '👨‍💼',
+  role: 'admin',
+  joinedAt: '2024-01-15'
+};
 
 const initialNotifications: Notification[] = [
   {
@@ -237,45 +267,125 @@ const initialNotifications: Notification[] = [
     read: true,
     boardId: '1',
     avatar: '✅'
-  },
-  {
-    id: '4',
-    title: 'Board Updated',
-    message: 'Website Redesign board has been updated with new requirements',
-    type: 'info',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    read: false,
-    boardId: '2',
-    avatar: '📋'
-  },
-  {
-    id: '5',
-    title: 'Overdue Task',
-    message: 'You have an overdue task in Mobile App Development',
-    type: 'error',
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    read: true,
-    boardId: '3',
-    avatar: '🚨'
   }
 ];
 
 export const useBoardStore = create<BoardStore>((set, get) => ({
+  // Auth Initial State
+  isAuthenticated: false,
+  currentUser: null,
+  showAuthModal: false,
+  authMode: 'login',
+
   // Initial State
-  boards: initialBoards,
+  boards: [],
   currentView: 'dashboard',
   selectedBoard: null,
   viewMode: 'grid',
   searchTerm: '',
   filterPriority: 'all',
   isDarkMode: true,
-  users: initialUsers,
-  notifications: initialNotifications,
+  users: [],
+  notifications: [],
+
   // Modal states
   showNewBoardModal: false,
   showNewTaskModal: false,
   showNewColumnModal: false,
   selectedColumn: '',
+
+  // Auth Actions
+  setShowAuthModal: (show) => set({ showAuthModal: show }),
+  setAuthMode: (mode) => set({ authMode: mode }),
+
+  login: async (email: string, password: string) => {
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Simple validation for demo
+    if (email === 'demo@taskflow.com' && password === 'demo123') {
+      set({
+        isAuthenticated: true,
+        currentUser: demoUser,
+        showAuthModal: false,
+        boards: initialBoards,
+        users: initialUsers,
+        notifications: initialNotifications
+      });
+      return { success: true };
+    } else if (email && password) {
+      // Allow any email/password combination for demo
+      set({
+        isAuthenticated: true,
+        currentUser: {
+          id: Date.now().toString(),
+          name: email.split('@')[0],
+          email,
+          avatar: '👤',
+          role: 'member',
+          joinedAt: new Date().toISOString().split('T')[0]
+        },
+        showAuthModal: false,
+        boards: initialBoards,
+        users: initialUsers,
+        notifications: initialNotifications
+      });
+      return { success: true };
+    }
+    
+    return { success: false, error: 'Invalid credentials' };
+  },
+
+  signup: async (name: string, email: string, password: string) => {
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    if (name && email && password) {
+      const newUser: AuthUser = {
+        id: Date.now().toString(),
+        name,
+        email,
+        avatar: name.charAt(0).toUpperCase(),
+        role: 'member',
+        joinedAt: new Date().toISOString().split('T')[0]
+      };
+      
+      set({
+        isAuthenticated: true,
+        currentUser: newUser,
+        showAuthModal: false,
+        boards: initialBoards,
+        users: initialUsers,
+        notifications: initialNotifications
+      });
+      return { success: true };
+    }
+    
+    return { success: false, error: 'Please fill all fields' };
+  },
+
+  loginAsDemo: () => {
+    set({
+      isAuthenticated: true,
+      currentUser: demoUser,
+      showAuthModal: false,
+      boards: initialBoards,
+      users: initialUsers,
+      notifications: initialNotifications
+    });
+  },
+
+  logout: () => {
+    set({
+      isAuthenticated: false,
+      currentUser: null,
+      boards: [],
+      users: [],
+      notifications: [],
+      selectedBoard: null,
+      currentView: 'dashboard'
+    });
+  },
 
   // State setters
   setCurrentView: (view) => set({ currentView: view }),
@@ -291,7 +401,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   setShowNewColumnModal: (show) => set({ showNewColumnModal: show }),
   setSelectedColumn: (columnId) => set({ selectedColumn: columnId }),
 
-    // Notification actions
+  // Notification actions
   markNotificationAsRead: (notificationId) => {
     set((state) => ({
       notifications: state.notifications.map(notification =>
@@ -316,16 +426,20 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     const { notifications } = get();
     return notifications.filter(notification => !notification.read).length;
   },
+
   // Board CRUD
   createBoard: (boardData) => {
+    const { currentUser } = get();
+    if (!currentUser) return;
+
     const newBoard: Board = {
       id: Date.now().toString(),
       title: boardData.title,
       description: boardData.description,
-      createdBy: 'Current User',
+      createdBy: currentUser.name,
       createdAt: new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString().split('T')[0],
-      members: ['Current User'],
+      members: [currentUser.name],
       taskCount: 0,
       completedTasks: 0,
       priority: boardData.priority,
@@ -382,14 +496,14 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
 
   // Task CRUD
   createTask: (columnId, taskData) => {
-    const { selectedBoard } = get();
-    if (!selectedBoard) return;
+    const { selectedBoard, currentUser } = get();
+    if (!selectedBoard || !currentUser) return;
 
     const newTask: Task = {
       id: Date.now().toString(),
       title: taskData.title,
       description: taskData.description,
-      createdBy: 'Current User',
+      createdBy: currentUser.name,
       assignedTo: taskData.assignedTo,
       priority: taskData.priority,
       dueDate: taskData.dueDate,
@@ -496,36 +610,37 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   },
 
   // Column CRUD
-createColumn: (boardId, columnData) => {
-  const newColumn: Column = {
-    id: `col-${Date.now()}`,
-    title: columnData.title,
-    boardId,
-    order: 0,
-    color: columnData.color || 'bg-gray-100',
-    tasks: []
-  };
-
-  set((state) => {
-    const updatedBoards = state.boards.map(board => {
-      if (board.id === boardId) {
-        return {
-          ...board,
-          columns: [...board.columns, { ...newColumn, order: board.columns.length }]
-        };
-      }
-      return board;
-    });
-
-    return {
-      boards: updatedBoards,
-      selectedBoard: state.selectedBoard?.id === boardId 
-        ? updatedBoards.find(b => b.id === boardId) || state.selectedBoard
-        : state.selectedBoard,
-      showNewColumnModal: false
+  createColumn: (boardId, columnData) => {
+    const newColumn: Column = {
+      id: `col-${Date.now()}`,
+      title: columnData.title,
+      boardId,
+      order: 0,
+      color: columnData.color || 'bg-gray-100',
+      tasks: []
     };
-  });
-},
+
+    set((state) => {
+      const updatedBoards = state.boards.map(board => {
+        if (board.id === boardId) {
+          return {
+            ...board,
+            columns: [...board.columns, { ...newColumn, order: board.columns.length }]
+          };
+        }
+        return board;
+      });
+
+      return {
+        boards: updatedBoards,
+        selectedBoard: state.selectedBoard?.id === boardId 
+          ? updatedBoards.find(b => b.id === boardId) || state.selectedBoard
+          : state.selectedBoard,
+        showNewColumnModal: false
+      };
+    });
+  },
+
   updateColumn: (columnId, updates) => {
     set((state) => ({
       boards: state.boards.map(board => ({
@@ -539,45 +654,44 @@ createColumn: (boardId, columnData) => {
 
   deleteColumn: (columnId) => {
     set((state) => ({
-      boards: state.boards.map(board => ({
-        ...board,
-        columns: board.columns.filter(column => column.id !== columnId)
-      }))
+      boards: state.boards.filter(board => board.id !== columnId)
     }));
   },
-reorderColumns: (boardId, fromIndex, toIndex) => {
-  set((state) => {
-    const updatedBoards = state.boards.map(board => {
-      if (board.id === boardId) {
-        const newColumns = [...board.columns];
-        
-        // Remove the dragged column and insert it at the new position
-        const [draggedColumn] = newColumns.splice(fromIndex, 1);
-        newColumns.splice(toIndex, 0, draggedColumn);
-        
-        // Update the order property for all columns
-        const reorderedColumns = newColumns.map((column, index) => ({
-          ...column,
-          order: index
-        }));
 
-        return {
-          ...board,
-          columns: reorderedColumns,
-          updatedAt: new Date().toISOString().split('T')[0]
-        };
-      }
-      return board;
+  reorderColumns: (boardId, fromIndex, toIndex) => {
+    set((state) => {
+      const updatedBoards = state.boards.map(board => {
+        if (board.id === boardId) {
+          const newColumns = [...board.columns];
+          
+          // Remove the dragged column and insert it at the new position
+          const [draggedColumn] = newColumns.splice(fromIndex, 1);
+          newColumns.splice(toIndex, 0, draggedColumn);
+          
+          // Update the order property for all columns
+          const reorderedColumns = newColumns.map((column, index) => ({
+            ...column,
+            order: index
+          }));
+
+          return {
+            ...board,
+            columns: reorderedColumns,
+            updatedAt: new Date().toISOString().split('T')[0]
+          };
+        }
+        return board;
+      });
+
+      return {
+        boards: updatedBoards,
+        selectedBoard: state.selectedBoard?.id === boardId 
+          ? updatedBoards.find(b => b.id === boardId) || state.selectedBoard
+          : state.selectedBoard
+      };
     });
+  },
 
-    return {
-      boards: updatedBoards,
-      selectedBoard: state.selectedBoard?.id === boardId 
-        ? updatedBoards.find(b => b.id === boardId) || state.selectedBoard
-        : state.selectedBoard
-    };
-  });
-},
   // Utility functions
   getFilteredBoards: () => {
     const { boards, searchTerm, filterPriority } = get();
