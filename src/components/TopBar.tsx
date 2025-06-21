@@ -10,6 +10,7 @@ import {
   User,
   Settings
 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useBoardStore } from '../store/boardStore';
 
 interface TopBarProps {
@@ -37,19 +38,19 @@ const TopBar: React.FC<TopBarProps> = ({
     isDarkMode, 
     setIsDarkMode,
     setShowNewBoardModal,
-    currentView,
-    setCurrentView,
     getUnreadNotificationCount
   } = useBoardStore();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const unreadCount = getUnreadNotificationCount();
 
   const handleNotificationClick = () => {
-    setCurrentView('notifications');
+    navigate('/notifications');
   };
 
   const handleSettingsClick = () => {
-    setCurrentView('settings');
+    navigate('/settings');
   };
 
   return (
@@ -71,7 +72,7 @@ const TopBar: React.FC<TopBarProps> = ({
             <button
               onClick={handleNotificationClick}
               className={`relative p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors ${
-                currentView === 'notifications' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : ''
+                location.pathname === '/notifications' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : ''
               }`}
               title="Notifications"
             >
@@ -87,7 +88,7 @@ const TopBar: React.FC<TopBarProps> = ({
             <button
               onClick={handleSettingsClick}
               className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors ${
-                currentView === 'settings' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : ''
+                location.pathname === '/settings' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : ''
               }`}
               title="Settings"
             >
@@ -112,7 +113,7 @@ const TopBar: React.FC<TopBarProps> = ({
             </button>
             
             {/* New Board Button - only show on relevant pages */}
-            {(currentView === 'boards' || currentView === 'dashboard') && (
+            {(location.pathname === '/boards' || location.pathname === '/dashboard') && (
               <button
                 onClick={() => setShowNewBoardModal(true)}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center space-x-2"

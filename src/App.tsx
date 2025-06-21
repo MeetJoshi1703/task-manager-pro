@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Calendar from './pages/Calendar';
 import TeamMembers from './pages/TeamMembers';
 import MyTasks from './pages/MyTasks';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
@@ -182,10 +183,13 @@ const App: React.FC = () => {
   // Show landing page if not authenticated
   if (!isAuthenticated) {
     return (
-      <>
-        <LandingPage />
+      <Router>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
         <AuthModal />
-      </>
+      </Router>
     );
   }
 
@@ -613,35 +617,40 @@ const App: React.FC = () => {
     );
   };
 
-  return (
-    <div className={`font-sans flex h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Sidebar */}
-      <Sidebar 
-        isCollapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
-      
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Main Pages */}
-        <div className="flex-1 overflow-auto">
-          {currentView === 'dashboard' && <Dashboard />}
-          {currentView === 'boards' && <BoardView />}
-          {currentView === 'board-detail' && <BoardDetail />}
-          {currentView === 'calendar' && <Calendar />}
-          {currentView === 'team' && <TeamMembers />}
-          {currentView === 'tasks' && <MyTasks />}
-          {currentView === 'notifications' && <Notifications />}
-          {currentView === 'settings' && <Settings />}
+return (
+    <Router>
+      <div className={`font-sans flex h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        {/* Sidebar */}
+        <Sidebar
+          isCollapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-auto">
+            <Routes>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/boards" element={<BoardView />} />
+              <Route path="/boards/:boardId" element={<BoardDetail />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/team" element={<TeamMembers />} />
+              <Route path="/tasks" element={<MyTasks />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </div>
         </div>
+
+        {/* Modals */}
+        <NewBoardModal />
+        <NewTaskModal />
+        <NewColumnModal />
+        <AuthModal />
       </div>
-      
-      {/* Modals */}
-      <NewBoardModal />
-      <NewTaskModal />
-      <NewColumnModal />
-      <AuthModal />
-    </div>
+    </Router>
   );
 };
 

@@ -20,6 +20,7 @@ import {
   HelpCircle,
   LogOut
 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useBoardStore } from '../store/boardStore';
 
 interface SidebarProps {
@@ -31,72 +32,65 @@ const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed = false, 
   onToggleCollapse 
 }) => {
-  const { isDarkMode, currentView, setCurrentView, setShowNewBoardModal, boards } = useBoardStore();
+  const { isDarkMode, setShowNewBoardModal, boards } = useBoardStore();
+  const navigate = useNavigate();
+  const location = useLocation();
   
-  // Set active section based on current view from store
-  const activeSection = currentView === 'board-detail' ? 'boards' : currentView;
+  // Determine active section based on current route
+  const activeSection = location.pathname.startsWith('/boards') ? 'boards' : 
+    location.pathname === '/dashboard' ? 'dashboard' :
+    location.pathname === '/calendar' ? 'calendar' :
+    location.pathname === '/team' ? 'team' :
+    location.pathname === '/tasks' ? 'tasks' : '';
 
   const navigationItems = [
     {
       section: 'main',
       title: 'Main',
       items: [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, badge: null, comingSoon: false },
-        { id: 'boards', label: 'Boards', icon: Kanban, badge: boards.length.toString(), comingSoon: false },
-        { id: 'calendar', label: 'Calendar', icon: Calendar, badge: null, comingSoon: false },
-        // { id: 'analytics', label: 'Analytics', icon: BarChart3, badge: null, comingSoon: true },
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, badge: null, comingSoon: false, path: '/dashboard' },
+        { id: 'boards', label: 'Boards', icon: Kanban, badge: boards.length.toString(), comingSoon: false, path: '/boards' },
+        { id: 'calendar', label: 'Calendar', icon: Calendar, badge: null, comingSoon: false, path: '/calendar' },
+        // { id: 'analytics', label: 'Analytics', icon: BarChart3, badge: null, comingSoon: true, path: '/analytics' },
       ]
     },
     {
       section: 'workspace',
       title: 'Workspace',
       items: [
-        { id: 'team', label: 'Team Members', icon: Users, badge: '5', comingSoon: false },
-        // { id: 'projects', label: 'Projects', icon: FolderOpen, badge: null, comingSoon: true },
-        { id: 'tasks', label: 'My Tasks', icon: Target, badge: '12', comingSoon: false },
-        // { id: 'recent', label: 'Recent Activity', icon: Clock, badge: null, comingSoon: true },
+        { id: 'team', label: 'Team Members', icon: Users, badge: '5', comingSoon: false, path: '/team' },
+        // { id: 'projects', label: 'Projects', icon: FolderOpen, badge: null, comingSoon: true, path: '/projects' },
+        { id: 'tasks', label: 'My Tasks', icon: Target, badge: '12', comingSoon: false, path: '/tasks' },
+        // { id: 'recent', label: 'Recent Activity', icon: Clock, badge: null, comingSoon: true, path: '/recent' },
       ]
     }
     // {
     //   section: 'communication',
     //   title: 'Communication',
     //   items: [
-    //     { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '2', comingSoon: true },
-    //     { id: 'notifications', label: 'Notifications', icon: Bell, badge: '7', comingSoon: true },
-    //     { id: 'documents', label: 'Documents', icon: FileText, badge: null, comingSoon: true },
+    //     { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '2', comingSoon: true, path: '/messages' },
+    //     { id: 'notifications', label: 'Notifications', icon: Bell, badge: '7', comingSoon: true, path: '/notifications' },
+    //     { id: 'documents', label: 'Documents', icon: FileText, badge: null, comingSoon: true, path: '/documents' },
     //   ]
     // },
     // {
     //   section: 'other',
     //   title: 'Other',
     //   items: [
-    //     { id: 'archive', label: 'Archive', icon: Archive, badge: null, comingSoon: true },
-    //     { id: 'trash', label: 'Trash', icon: Trash2, badge: null, comingSoon: true },
+    //     { id: 'archive', label: 'Archive', icon: Archive, badge: null, comingSoon: true, path: '/archive' },
+    //     { id: 'trash', label: 'Trash', icon: Trash2, badge: null, comingSoon: true, path: '/trash' },
     //   ]
     // }
   ];
 
   const bottomItems = [
-    // { id: 'help', label: 'Help & Support', icon: HelpCircle },
-    // { id: 'settings', label: 'Settings', icon: Settings },
+    // { id: 'help', label: 'Help & Support', icon: HelpCircle, path: '/help' },
+    // { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
   ];
 
-  const handleNavClick = (itemId: string, comingSoon: boolean) => {
-    if (comingSoon) return; 
-    
-    
-       if (itemId === 'dashboard') {
-      setCurrentView('dashboard');
-    } else if (itemId === 'boards') {
-      setCurrentView('boards');
-    } else if (itemId === 'calendar') {
-      setCurrentView('calendar');
-    } else if (itemId === 'team') {
-      setCurrentView('team');
-    } else if (itemId === 'tasks') {
-      setCurrentView('tasks');
-    }
-    
+  const handleNavClick = (path: string, comingSoon: boolean) => {
+    if (comingSoon) return;
+    navigate(path);
   };
 
   return (
@@ -181,7 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 return (
                   <button
                     key={item.id}
-                    onClick={() => handleNavClick(item.id, item.comingSoon)}
+                    onClick={() => handleNavClick(item.path, item.comingSoon)}
                     disabled={item.comingSoon}
                     className={`
                       w-full flex items-center rounded-lg transition-all duration-200
@@ -263,6 +257,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             return (
               <button
                 key={item.id}
+                onClick={() => handleNavClick(item.path, false)}
                 className={`
                   w-full flex items-center rounded-lg transition-colors duration-200
                   ${isCollapsed ? 'p-3 justify-center' : 'px-3 py-2 justify-start'}
