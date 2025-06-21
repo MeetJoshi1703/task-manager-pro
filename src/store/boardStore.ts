@@ -1,16 +1,30 @@
 import { create } from 'zustand';
 import type { Board, Task, Column, User, CreateBoardData, CreateTaskData, CreateColumnData } from '../types/types';
 
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  timestamp: string;
+  read: boolean;
+  actionUrl?: string;
+  avatar?: string;
+  boardId?: string;
+}
+
 interface BoardStore {
   // State
   boards: Board[];
-  currentView: 'dashboard' | 'boards' | 'board-detail' | 'calendar' | 'team' | 'tasks';
+  currentView: 'dashboard' | 'boards' | 'board-detail' | 'calendar' | 'team' | 'tasks' | 'notifications' | 'settings';
   selectedBoard: Board | null;
   viewMode: 'grid' | 'list';
   searchTerm: string;
   filterPriority: string;
   isDarkMode: boolean;
   users: User[];
+  notifications: Notification[];
+
 
   // Modal states
   showNewBoardModal: boolean;
@@ -18,8 +32,15 @@ interface BoardStore {
   showNewColumnModal: boolean;
   selectedColumn: string;
 
+  // Notification actions
+  markNotificationAsRead: (notificationId: string) => void;
+  markAllNotificationsAsRead: () => void;
+  deleteNotification: (notificationId: string) => void;
+  getUnreadNotificationCount: () => number;
+
+
   // Actions
-  setCurrentView: (view: 'dashboard' | 'boards' | 'board-detail' | 'calendar' | 'team' | 'tasks') => void;
+  setCurrentView: (view: 'dashboard' | 'boards' | 'board-detail' | 'calendar' | 'team' | 'tasks' | 'notifications' | 'settings') => void;
   setSelectedBoard: (board: Board | null) => void;
   setViewMode: (mode: 'grid' | 'list') => void;
   setSearchTerm: (term: string) => void;
@@ -186,6 +207,59 @@ const initialUsers: User[] = [
   { id: '5', name: 'Alex Wilson', email: 'alex@company.com', avatar: '👨‍🔬' }
 ];
 
+const initialNotifications: Notification[] = [
+  {
+    id: '1',
+    title: 'Task Due Tomorrow',
+    message: 'Design Landing Page is due tomorrow in Product Launch Q2 board',
+    type: 'warning',
+    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    read: false,
+    boardId: '1',
+    avatar: '⏰'
+  },
+  {
+    id: '2',
+    title: 'New Task Assigned',
+    message: 'Mike Chen assigned you to Backend API Development',
+    type: 'info',
+    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    read: false,
+    boardId: '1',
+    avatar: '👨‍💻'
+  },
+  {
+    id: '3',
+    title: 'Task Completed',
+    message: 'Market Research has been marked as complete',
+    type: 'success',
+    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    read: true,
+    boardId: '1',
+    avatar: '✅'
+  },
+  {
+    id: '4',
+    title: 'Board Updated',
+    message: 'Website Redesign board has been updated with new requirements',
+    type: 'info',
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    read: false,
+    boardId: '2',
+    avatar: '📋'
+  },
+  {
+    id: '5',
+    title: 'Overdue Task',
+    message: 'You have an overdue task in Mobile App Development',
+    type: 'error',
+    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    read: true,
+    boardId: '3',
+    avatar: '🚨'
+  }
+];
+
 export const useBoardStore = create<BoardStore>((set, get) => ({
   // Initial State
   boards: initialBoards,
@@ -196,7 +270,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   filterPriority: 'all',
   isDarkMode: true,
   users: initialUsers,
-  
+  notifications: initialNotifications,
   // Modal states
   showNewBoardModal: false,
   showNewTaskModal: false,
@@ -217,6 +291,31 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   setShowNewColumnModal: (show) => set({ showNewColumnModal: show }),
   setSelectedColumn: (columnId) => set({ selectedColumn: columnId }),
 
+    // Notification actions
+  markNotificationAsRead: (notificationId) => {
+    set((state) => ({
+      notifications: state.notifications.map(notification =>
+        notification.id === notificationId ? { ...notification, read: true } : notification
+      )
+    }));
+  },
+
+  markAllNotificationsAsRead: () => {
+    set((state) => ({
+      notifications: state.notifications.map(notification => ({ ...notification, read: true }))
+    }));
+  },
+
+  deleteNotification: (notificationId) => {
+    set((state) => ({
+      notifications: state.notifications.filter(notification => notification.id !== notificationId)
+    }));
+  },
+
+  getUnreadNotificationCount: () => {
+    const { notifications } = get();
+    return notifications.filter(notification => !notification.read).length;
+  },
   // Board CRUD
   createBoard: (boardData) => {
     const newBoard: Board = {

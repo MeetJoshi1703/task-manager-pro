@@ -37,8 +37,20 @@ const TopBar: React.FC<TopBarProps> = ({
     isDarkMode, 
     setIsDarkMode,
     setShowNewBoardModal,
-    currentView
+    currentView,
+    setCurrentView,
+    getUnreadNotificationCount
   } = useBoardStore();
+
+  const unreadCount = getUnreadNotificationCount();
+
+  const handleNotificationClick = () => {
+    setCurrentView('notifications');
+  };
+
+  const handleSettingsClick = () => {
+    setCurrentView('settings');
+  };
 
   return (
     <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-40`}>
@@ -57,18 +69,26 @@ const TopBar: React.FC<TopBarProps> = ({
           <div className="flex items-center space-x-3">
             {/* Notifications */}
             <button
-              className={`relative p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
+              onClick={handleNotificationClick}
+              className={`relative p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors ${
+                currentView === 'notifications' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : ''
+              }`}
               title="Notifications"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs flex items-center justify-center">
-                <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-              </span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center text-white font-medium">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
 
             {/* Settings */}
             <button
-              className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
+              onClick={handleSettingsClick}
+              className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors ${
+                currentView === 'settings' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : ''
+              }`}
               title="Settings"
             >
               <Settings className="w-5 h-5" />

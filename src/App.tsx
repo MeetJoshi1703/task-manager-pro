@@ -8,6 +8,8 @@ import Calendar from './pages/Calendar';
 import TeamMembers from './pages/TeamMembers'; // Add this import
 import MyTasks from './pages/MyTasks'; // Add this import
 import Sidebar from './components/Sidebar';
+import Notifications from './pages/Notifications';
+import Settings from './pages/Settings';
 import type { CreateBoardData, CreateTaskData, CreateColumnData } from './types/types';
 
 const App: React.FC = () => {
@@ -472,6 +474,8 @@ const App: React.FC = () => {
           {currentView === 'calendar' && <Calendar />}
           {currentView === 'team' && <TeamMembers />}
           {currentView === 'tasks' && <MyTasks />}
+          {currentView === 'notifications' && <Notifications />}
+          {currentView === 'settings' && <Settings />}
         </div>
       </div>
       
