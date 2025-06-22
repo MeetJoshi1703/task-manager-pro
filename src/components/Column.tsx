@@ -1,3 +1,4 @@
+// src/components/Column.tsx
 import React, { useState, useRef } from 'react';
 import { 
   Plus, 
@@ -5,11 +6,10 @@ import {
   Edit3, 
   Trash2, 
   X, 
-  Save,
-  GripVertical
+  Save
 } from 'lucide-react';
 import type { Column as ColumnType } from '../types/types';
-import { useBoardStore } from '../store/boardStore';
+import { useColumns, useTasks, useUI } from '../store/hooks';
 import TaskCard from './TaskCard';
 
 interface ColumnProps {
@@ -17,18 +17,13 @@ interface ColumnProps {
 }
 
 const Column: React.FC<ColumnProps> = ({ column }) => {
-  const { 
-    isDarkMode, 
-    setSelectedColumn, 
-    setShowNewTaskModal, 
-    updateColumn, 
-    deleteColumn,
-    moveTask
-  } = useBoardStore();
+  // Use new hooks instead of useBoardStore
+  const { updateColumn, deleteColumn } = useColumns();
+  const { moveTask } = useTasks();
+  const { isDarkMode, setSelectedColumn, setShowNewTaskModal } = useUI();
   
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(column.title);
-  const [isDragOver, setIsDragOver] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isTaskDragOver, setIsTaskDragOver] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -92,7 +87,11 @@ const Column: React.FC<ColumnProps> = ({ column }) => {
     const taskId = e.dataTransfer.getData('text/plain');
     if (taskId && !taskId.startsWith('column-')) {
       // Move task to this column at the end
-      moveTask(taskId, column.id, column.tasks.length);
+      moveTask({
+        task_id: taskId,
+        target_column_id: column.id,
+        new_position: column.tasks.length
+      });
       
       // Success feedback
       if ('vibrate' in navigator) {

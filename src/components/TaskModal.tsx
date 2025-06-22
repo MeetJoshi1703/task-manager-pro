@@ -1,28 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Calendar, User, Tag } from 'lucide-react';
-import { useBoardStore } from '../store/boardStore';
+import { useUI, useTasks, useBoards, useMembers } from '../store/hooks';
 import type { CreateTaskData } from '../types/types';
 
 const TaskModal: React.FC = () => {
-  const {
-    showNewTaskModal,
-    setShowNewTaskModal,
-    selectedColumn,
-    selectedBoard,
-    createTask,
-    boardMembers,
-    isDarkMode,
-    loading
-  } = useBoardStore();
+  // Use new modular hooks instead of monolithic store
+  const { showNewTaskModal, closeNewTaskModal, isDarkMode, selectedColumn } = useUI();
+  const { createTask, loading } = useTasks();
+  const { selectedBoard } = useBoards();
+  const { boardMembers } = useMembers();
 
   const [formData, setFormData] = useState<CreateTaskData>({
     title: '',
     description: '',
     priority: 'medium',
-    due_date: '',
-    column_id: selectedColumn,
-    board_id: selectedBoard?.id || '',
-    assignee_ids: [],
+    dueDate: '',
+    assignedTo: [],
     tags: []
   });
 
@@ -33,8 +26,8 @@ const TaskModal: React.FC = () => {
   useEffect(() => {
     setFormData(prev => ({
       ...prev,
-      column_id: selectedColumn,
-      board_id: selectedBoard?.id || ''
+      columnId: selectedColumn,
+      boardId: selectedBoard?.id || ''
     }));
   }, [selectedColumn, selectedBoard]);
 
@@ -45,12 +38,12 @@ const TaskModal: React.FC = () => {
       newErrors.title = 'Title is required';
     }
 
-    if (!formData.column_id) {
-      newErrors.column_id = 'Column is required';
+    if (!selectedColumn) {
+      newErrors.column = 'Column is required';
     }
 
-    if (!formData.board_id) {
-      newErrors.board_id = 'Board is required';
+    if (!selectedBoard?.id) {
+      newErrors.board = 'Board is required';
     }
 
     setErrors(newErrors);
@@ -60,12 +53,12 @@ const TaskModal: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!validateForm() || !selectedColumn) {
       return;
     }
 
     try {
-      await createTask(formData.column_id, formData);
+      await createTask(selectedColumn, formData);
       handleClose();
     } catch (error) {
       console.error('Failed to create task:', error);
@@ -74,15 +67,13 @@ const TaskModal: React.FC = () => {
   };
 
   const handleClose = () => {
-    setShowNewTaskModal(false);
+    closeNewTaskModal();
     setFormData({
       title: '',
       description: '',
       priority: 'medium',
-      due_date: '',
-      column_id: selectedColumn,
-      board_id: selectedBoard?.id || '',
-      assignee_ids: [],
+      dueDate: '',
+      assignedTo: [],
       tags: []
     });
     setTagInput('');
@@ -111,18 +102,18 @@ const TaskModal: React.FC = () => {
   };
 
   const toggleAssignee = (userId: string) => {
-    const currentAssignees = formData.assignee_ids || [];
+    const currentAssignees = formData.assignedTo || [];
     const isAssigned = currentAssignees.includes(userId);
     
     if (isAssigned) {
       setFormData({
         ...formData,
-        assignee_ids: currentAssignees.filter(id => id !== userId)
+        assignedTo: currentAssignees.filter(id => id !== userId)
       });
     } else {
       setFormData({
         ...formData,
-        assignee_ids: [...currentAssignees, userId]
+        assignedTo: [...currentAssignees, userId]
       });
     }
   };
@@ -219,8 +210,8 @@ const TaskModal: React.FC = () => {
                 <div className="relative">
                   <input
                     type="date"
-                    value={formatDate(formData.due_date || '')}
-                    onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                    value={formatDate(formData.dueDate || '')}
+                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                     className={`w-full px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                     disabled={loading}
                   />
@@ -244,16 +235,16 @@ const TaskModal: React.FC = () => {
                   >
                     <input
                       type="checkbox"
-                      checked={formData.assignee_ids?.includes(member.user_id) || false}
-                      onChange={() => toggleAssignee(member.user_id)}
+                      checked={formData.assignedTo?.includes(member.id) || false}
+                      onChange={() => toggleAssignee(member.id)}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       disabled={loading}
                     />
                     <div className={`w-8 h-8 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} rounded-full flex items-center justify-center text-xs font-medium`}>
-                      {member.profiles.full_name?.charAt(0) || member.profiles.email.charAt(0)}
+                      {member.name?.charAt(0) || member.email.charAt(0)}
                     </div>
                     <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {member.profiles.full_name || member.profiles.email}
+                      {member.name || member.email}
                     </span>
                   </label>
                 ))}

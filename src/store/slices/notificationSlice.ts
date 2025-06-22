@@ -17,33 +17,56 @@ export const createNotificationSlice: StoreSlice<NotificationState & Notificatio
   // ================================
   // INITIAL STATE
   // ================================
-  ...getInitialNotificationState(),
+  notifications: [],
+  loading: false,
+  error: null,
+  hasFetched: false, // Initialize as false
 
   // ================================
   // NOTIFICATION OPERATIONS
   // ================================
   fetchNotifications: async () => {
     const state = get();
-    if (state.loading) return; // Prevent multiple simultaneous calls
+    
+    // Don't fetch if already loading or already fetched
+    if (state.loading || state.hasFetched) {
+      console.log('[Notifications] Already fetched or loading, skipping...');
+      return;
+    }
     
     set(() => ({ loading: true, error: null }));
     
     try {
+      console.log('[Notifications] Starting fetch...');
       const apiNotifications = await notificationService.getNotifications();
+      
+      if (!Array.isArray(apiNotifications)) {
+        throw new Error('Invalid API response: notifications is not an array');
+      }
       
       const notifications = apiNotifications.map(transformApiNotificationToNotification);
       
-      set(() => ({ notifications, loading: false }));
+      set(() => ({ 
+        notifications, 
+        loading: false, 
+        hasFetched: true // Mark as fetched
+      }));
       
       logOperation('fetchNotifications', { count: notifications.length });
+      console.log('[Notifications] Fetch completed successfully');
+      
     } catch (error: any) {
+      console.error('[Notifications] Fetch failed:', error);
       logError('fetchNotifications', error);
       set(() => ({ 
         error: error.message || 'Failed to fetch notifications', 
-        loading: false 
+        loading: false,
+        hasFetched: true // Mark as attempted even if failed
       }));
     }
   },
+
+
 
   markNotificationAsRead: async (notificationId) => {
     try {

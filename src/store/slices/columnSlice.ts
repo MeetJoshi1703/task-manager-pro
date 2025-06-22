@@ -14,29 +14,29 @@ export const createColumnSlice: StoreSlice<ColumnState & ColumnActions> = (set, 
   // INITIAL STATE
   // ================================
   ...getInitialColumnState(),
+  hasFetched: false,
 
   // ================================
   // COLUMN OPERATIONS
   // ================================
   fetchColumns: async (boardId) => {
+      const state = get();
+
     set(() => ({ loading: true, error: null }));
-    
+    if (state.loading || state.hasFetched) {
+      console.log('[Columns] Already fetched or loading, skipping...');
+      return;
+    }
     try {
       const columns = await columnService.getColumnsByBoard(boardId);
       const validColumns = columns.filter(isValidColumn);
-      
-      set((state) => ({
-        boardColumns: [
-          ...state.boardColumns.filter((c) => c.board_id !== boardId),
-          ...validColumns,
-        ],
-        loading: false,
-      }));
+      set(() => ({ boardColumns: columns, loading: false, hasFetched: true }));
       
       logOperation('fetchColumns', { boardId, count: validColumns.length });
     } catch (error: any) {
       logError('fetchColumns', error);
       handleApiError(error, get().logout, set);
+      set(() => ({ loading: false, hasFetched: true }));
     }
   },
 

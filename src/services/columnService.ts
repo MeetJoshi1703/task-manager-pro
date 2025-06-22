@@ -1,3 +1,5 @@
+import type { Column, CreateColumnRequestData, ReorderColumnData } from '../types/types';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const getAuthHeaders = () => {
@@ -8,29 +10,8 @@ const getAuthHeaders = () => {
   };
 };
 
-export interface CreateColumnData {
-  board_id: string;
-  title: string;
-  color?: string;
-}
-
-export interface Column {
-  id: string;
-  board_id: string;
-  title: string;
-  color: string;
-  position: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ReorderColumnData {
-  board_id: string;
-  columns: { id: string; position: number }[];
-}
-
 export const columnService = {
-  async createColumn(columnData: CreateColumnData): Promise<Column> {
+  async createColumn(columnData: CreateColumnRequestData): Promise<Column> {
     const response = await fetch(`${API_BASE_URL}/columns`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -99,3 +80,4 @@ export const columnService = {
     }
   },
 };
+

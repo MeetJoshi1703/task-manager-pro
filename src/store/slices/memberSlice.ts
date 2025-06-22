@@ -17,24 +17,37 @@ export const createMemberSlice: StoreSlice<MemberState & MemberActions> = (set, 
   // INITIAL STATE
   // ================================
   ...getInitialMemberState(),
+    hasFetched: false, // Add this line
+
 
   // ================================
   // MEMBER OPERATIONS
   // ================================
-  fetchMembers: async (boardId) => {
-    set(() => ({ loading: true, error: null }));
-    
-    try {
-      const members = await memberService.getMembers(boardId);
-      set(() => ({ boardMembers: members, loading: false }));
-      
-      logOperation('fetchMembers', { boardId, count: members.length });
-    } catch (error: any) {
-      logError('fetchMembers', error);
-      handleApiError(error, get().logout, set);
-    }
-  },
 
+  fetchMembers: async (boardId) => {
+  const state = get();
+  if (state.loading || state.hasFetched) {
+    console.log('[Members] Already fetched or loading, skipping...');
+    return;
+  }
+  
+  set(() => ({ loading: true, error: null }));
+  
+  try {
+    const members = await memberService.getMembers(boardId);
+    set(() => ({ 
+      boardMembers: members, 
+      loading: false,
+      hasFetched: true 
+    }));
+    
+    logOperation('fetchMembers', { boardId, count: members.length });
+  } catch (error: any) {
+    logError('fetchMembers', error);
+    handleApiError(error, get().logout, set);
+    set(() => ({ hasFetched: true })); // Mark as attempted even on error
+  }
+},
   addMember: async (boardId, memberData) => {
     set(() => ({ loading: true, error: null }));
     

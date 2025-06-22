@@ -4,24 +4,16 @@ import {
   Kanban,
   Users,
   Calendar,
-  BarChart3,
   Settings,
   Bell,
   Plus,
   ChevronLeft,
   ChevronRight,
-  FolderOpen,
-  Clock,
   Target,
-  MessageSquare,
-  FileText,
-  Archive,
-  Trash2,
-  HelpCircle,
   LogOut
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useBoardStore } from '../store/boardStore';
+import { useAuth, useBoards, useTasks, useMembers, useNotifications, useUI } from '../store/hooks';
 
 interface SidebarProps {
   isCollapsed?: boolean;
@@ -32,18 +24,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed = false, 
   onToggleCollapse 
 }) => {
-  const { 
-    isDarkMode, 
-    setShowNewBoardModal, 
-    boards, 
-    currentUser, 
-    isAuthenticated, 
-    logout,
-    boardMembers,
-    boardTasks,
-    notifications,
-    getUnreadNotificationCount
-  } = useBoardStore();
+  // Use new hooks instead of useBoardStore
+  const { isAuthenticated, currentUser, logout } = useAuth();
+  const { boards } = useBoards();
+  const { allTasks } = useTasks();
+  const { memberCount } = useMembers();
+  const { unreadCount } = useNotifications();
+  const { isDarkMode, setShowNewBoardModal } = useUI();
+  
+
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,25 +48,17 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Calculate real counts
   const totalBoards = boards.length;
-  const totalMembers = boardMembers.length;
-  const unreadNotifications = getUnreadNotificationCount();
   
   // Calculate user's tasks count
   const userTasksCount = React.useMemo(() => {
     if (!currentUser?.id) return 0;
     
-    let count = 0;
-    Object.values(boardTasks).forEach(columnTasks => {
-      if (Array.isArray(columnTasks)) {
-        columnTasks.forEach(task => {
-          if (task.assignees?.includes(currentUser.id) || task.created_by === currentUser.id) {
-            count++;
-          }
-        });
-      }
-    });
-    return count;
-  }, [boardTasks, currentUser?.id]);
+    return allTasks.filter(task => 
+      task.assignedTo?.includes(currentUser.id) || 
+      task.created_by === currentUser.id ||
+      task.createdBy === currentUser.id
+    ).length;
+  }, [allTasks, currentUser?.id]);
 
   const navigationItems = [
     {
@@ -87,40 +68,26 @@ const Sidebar: React.FC<SidebarProps> = ({
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, badge: null, comingSoon: false, path: '/dashboard' },
         { id: 'boards', label: 'Boards', icon: Kanban, badge: totalBoards > 0 ? totalBoards.toString() : null, comingSoon: false, path: '/boards' },
         { id: 'calendar', label: 'Calendar', icon: Calendar, badge: null, comingSoon: false, path: '/calendar' },
-        // { id: 'analytics', label: 'Analytics', icon: BarChart3, badge: null, comingSoon: true, path: '/analytics' },
       ]
     },
     {
       section: 'workspace',
       title: 'Workspace',
       items: [
-        { id: 'team', label: 'Team Members', icon: Users, badge: totalMembers > 0 ? totalMembers.toString() : null, comingSoon: false, path: '/team' },
-        // { id: 'projects', label: 'Projects', icon: FolderOpen, badge: null, comingSoon: true, path: '/projects' },
+        { id: 'team', label: 'Team Members', icon: Users, badge: memberCount > 0 ? memberCount.toString() : null, comingSoon: false, path: '/team' },
         { id: 'tasks', label: 'My Tasks', icon: Target, badge: userTasksCount > 0 ? userTasksCount.toString() : null, comingSoon: false, path: '/tasks' },
-        // { id: 'recent', label: 'Recent Activity', icon: Clock, badge: null, comingSoon: true, path: '/recent' },
       ]
     },
     {
       section: 'communication',
       title: 'Communication',
       items: [
-        // { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '2', comingSoon: true, path: '/messages' },
-        { id: 'notifications', label: 'Notifications', icon: Bell, badge: unreadNotifications > 0 ? unreadNotifications.toString() : null, comingSoon: false, path: '/notifications' },
-        // { id: 'documents', label: 'Documents', icon: FileText, badge: null, comingSoon: true, path: '/documents' },
+        { id: 'notifications', label: 'Notifications', icon: Bell, badge: unreadCount > 0 ? unreadCount.toString() : null, comingSoon: false, path: '/notifications' },
       ]
     }
-    // {
-    //   section: 'other',
-    //   title: 'Other',
-    //   items: [
-    //     { id: 'archive', label: 'Archive', icon: Archive, badge: null, comingSoon: true, path: '/archive' },
-    //     { id: 'trash', label: 'Trash', icon: Trash2, badge: null, comingSoon: true, path: '/trash' },
-    //   ]
-    // }
   ];
 
   const bottomItems = [
-    // { id: 'help', label: 'Help & Support', icon: HelpCircle, path: '/help' },
     { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
   ];
 
@@ -132,7 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const handleLogout = async () => {
     if (window.confirm('Are you sure you want to logout?')) {
       logout();
-      navigate('/login');
+      navigate('/');
     }
   };
 
@@ -373,9 +340,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               <p className={`text-xs truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 {currentUser?.email || 'user@example.com'}
               </p>
-              <p className={`text-xs capitalize ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                {currentUser?.role || 'member'}
-              </p>
             </div>
           )}
           
@@ -394,18 +358,27 @@ const Sidebar: React.FC<SidebarProps> = ({
           
           {/* Logout button for collapsed state */}
           {isCollapsed && (
-            <button 
-              onClick={handleLogout}
-              className={`
+            <div className="group relative">
+              <button 
+                onClick={handleLogout}
+                className={`
+                  p-1 rounded transition-colors
+                  ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}
+                `}
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+              
+              <div className={`
                 absolute left-full ml-2 px-2 py-1 rounded-lg text-sm font-medium
-                ${isDarkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-900 text-white hover:bg-gray-800'}
-                opacity-0 hover:opacity-100 transition-opacity duration-200
-                whitespace-nowrap z-50
-              `}
-              title="Logout"
-            >
-              Logout
-            </button>
+                ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-gray-900 text-white'}
+                opacity-0 group-hover:opacity-100 transition-opacity duration-200
+                pointer-events-none whitespace-nowrap z-50 bottom-0
+              `}>
+                Logout
+              </div>
+            </div>
           )}
         </div>
       </div>

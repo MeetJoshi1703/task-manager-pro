@@ -1,23 +1,29 @@
 import React, { useEffect } from 'react';
-import { useBoardStore } from '../store/boardStore';
+// import { useBoardStore } from '../store/boardStore';
+import { useBoards, useUI } from '../store/hooks';
+
 import BoardList from '../components/BoardList';
 import { Search, Filter, Plus, Grid3X3, List, Loader2 } from 'lucide-react';
 
 const BoardView: React.FC = () => {
   const { 
-    setShowNewBoardModal, 
-    viewMode, 
-    setViewMode, 
-    searchTerm, 
-    setSearchTerm, 
-    filterPriority, 
-    setFilterPriority, 
-    isDarkMode, 
-    fetchBoards, 
-    loading, 
+    boards,
+    loading,
     error,
-    boards
-  } = useBoardStore();
+    searchTerm,
+    filterPriority,
+    fetchBoards,
+    setSearchTerm,
+    setFilterPriority,
+    getFilteredBoards
+  } = useBoards();
+
+  const {
+    viewMode,
+    isDarkMode,
+    setViewMode,
+    openNewBoardModal
+  } = useUI();
 
   useEffect(() => {
     // Only fetch boards if we don't have any data yet
@@ -47,7 +53,7 @@ const BoardView: React.FC = () => {
             
             <div className="flex items-center space-x-4 w-full sm:w-auto">
               <button
-                onClick={() => setShowNewBoardModal(true)}
+                onClick={openNewBoardModal}
                 disabled={loading}
                 className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >

@@ -18,7 +18,7 @@ export const boardService = {
       body: JSON.stringify({
         title: boardData.title,
         description: boardData.description,
-        color: boardData.color.replace('bg-gradient-to-br from-', '').replace(' to-', '/'), // Convert to backend format (e.g., 'indigo-500/purple-500')
+        color: boardData.color.replace('bg-gradient-to-br from-', '').replace(' to-', '/'),
         priority: boardData.priority,
       }),
     });
@@ -37,7 +37,7 @@ export const boardService = {
       completedTasks: 0,
       columns: [],
       isStarred: data.board.is_starred,
-      color: boardData.color, // Retain frontend gradient format
+      color: boardData.color,
     };
   },
 
@@ -60,7 +60,7 @@ export const boardService = {
       createdAt: board.created_at,
       updatedAt: board.updated_at,
       members: board.board_members?.map((m: any) => m.profiles?.full_name || m.user_id) || [],
-      taskCount: 0, // Will be updated in column/task integration
+      taskCount: 0,
       completedTasks: 0,
       priority: board.priority,
       isStarred: board.is_starred,

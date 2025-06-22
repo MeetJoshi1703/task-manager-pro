@@ -1,50 +1,16 @@
 import apiClient from "../utils/api";
-
-export interface CreateTaskData {
-  column_id: string;
-  title: string;
-  description?: string;
-  priority?: 'low' | 'medium' | 'high';
-  due_date?: string;
-  assignees?: string[];
-  tags?: string[];
-}
-
-export interface UpdateTaskData {
-  title?: string;
-  description?: string;
-  priority?: 'low' | 'medium' | 'high';
-  due_date?: string;
-  status?: string;
-}
-
-export interface MoveTaskData {
-  task_id: string;
-  target_column_id: string;
-  new_position: number;
-}
-
-export interface AddAssigneeData {
-  user_id: string;
-}
-
-export interface AddTagData {
-  tag: string;
-}
-
-export interface AddCommentData {
-  content: string;
-}
-
-export interface AddAttachmentData {
-  file_name: string;
-  file_url: string;
-  file_size: number;
-  file_type: string;
-}
+import type { 
+  CreateTaskRequestData, 
+  UpdateTaskData, 
+  MoveTaskData, 
+  AddAssigneeData, 
+  AddTagData, 
+  AddCommentData, 
+  AddAttachmentData 
+} from '../types/types';
 
 export class TaskService {
-  async createTask(taskData: CreateTaskData) {
+  async createTask(taskData: CreateTaskRequestData) {
     const response = await apiClient.post('/tasks', taskData);
     return response;
   }
@@ -55,11 +21,9 @@ export class TaskService {
   }
 
   async getAllTasks() {
-   
     const response = await apiClient.get('/tasks/getAllTasks');
-    return response
+    return response;
   }
-  
 
   async getTaskById(taskId: string) {
     const response = await apiClient.get(`/tasks/details/${taskId}`);

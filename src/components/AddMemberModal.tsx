@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, UserPlus, Mail, Shield } from 'lucide-react';
-import { useBoardStore } from '../store/boardStore';
-import type { AddMemberData } from '../services/memberService';
+import { useBoardStore } from '../store';
+import type { AddMemberData } from '../types/types';
 
 const AddMemberModal: React.FC = () => {
   const { 
@@ -10,10 +10,10 @@ const AddMemberModal: React.FC = () => {
     addMember, 
     selectedBoard, 
     isDarkMode,
-    membersLoading,
+    loading,
     error 
   } = useBoardStore();
-
+  const membersLoading = loading ;
   const [formData, setFormData] = useState<AddMemberData>({
     email: '',
     role: 'member'

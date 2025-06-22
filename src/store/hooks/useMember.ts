@@ -7,7 +7,8 @@ export const useMembers = () => {
   const users = useBoardStore(state => state.users);
   const loading = useBoardStore(state => state.loading);
   const error = useBoardStore(state => state.error);
-  
+    const hasFetched = useBoardStore(state => state.hasFetched); // Add this
+
   // Actions
   const fetchMembers = useBoardStore(state => state.fetchMembers);
   const addMember = useBoardStore(state => state.addMember);
@@ -29,6 +30,7 @@ export const useMembers = () => {
     users,
     loading,
     error,
+    hasFetched,
     
     // Actions
     fetchMembers,

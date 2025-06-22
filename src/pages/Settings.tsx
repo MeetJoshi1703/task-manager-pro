@@ -28,24 +28,24 @@ import {
   ChevronRight,
   
 } from 'lucide-react';
-import { useBoardStore } from '../store/boardStore';
+import { useAuth, useBoards, useTasks, useMembers, useUI } from '../store/hooks';
 import TopBar from '../components/TopBar';
 
 const Settings: React.FC = () => {
   const { 
-    isDarkMode, 
-    setIsDarkMode, 
-    currentUser,
-    isAuthenticated,
-    boards,
-    boardMembers,
-    boardTasks,
-    logout
-  } = useBoardStore();
+    isAuthenticated, 
+    currentUser, 
+    logout 
+  } = useAuth();
+  const { boards } = useBoards();
+  const { boardTasks } = useTasks();
+  const { boardMembers } = useMembers();
+  const { isDarkMode, setIsDarkMode } = useUI();
 
   // State for different settings sections
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
+
   
   // Initialize profile data with real user data
   const [profileData, setProfileData] = useState({
@@ -107,25 +107,26 @@ const Settings: React.FC = () => {
   const [unsavedChanges, setUnsavedChanges] = useState(false);
 
   // Calculate real statistics
-  const getStatistics = () => {
-    const totalBoards = boards.length;
-    
-    // Calculate completed tasks
-    let completedTasks = 0;
-    Object.values(boardTasks).forEach(columnTasks => {
-      if (Array.isArray(columnTasks)) {
-        completedTasks += columnTasks.filter(task => task.status === 'completed').length;
-      }
-    });
-    
-    const totalMembers = boardMembers.length;
-    
-    return {
-      boardsCreated: totalBoards,
-      tasksCompleted: completedTasks,
-      teamMembers: totalMembers
-    };
+// This function stays exactly the same
+const getStatistics = () => {
+  const totalBoards = boards.length;
+  
+  // Calculate completed tasks
+  let completedTasks = 0;
+  Object.values(boardTasks).forEach(columnTasks => {
+    if (Array.isArray(columnTasks)) {
+      completedTasks += columnTasks.filter(task => task.status === 'completed').length;
+    }
+  });
+  
+  const totalMembers = boardMembers.length;
+  
+  return {
+    boardsCreated: totalBoards,
+    tasksCompleted: completedTasks,
+    teamMembers: totalMembers
   };
+};
 
   const statistics = getStatistics();
 

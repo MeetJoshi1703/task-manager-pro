@@ -15,7 +15,8 @@ import {
   MoreHorizontal,
   Flag,
 } from 'lucide-react';
-import { useBoardStore } from '../store/boardStore';
+import { useAuth, useBoards, useTasks, useColumns, useUI } from '../store/hooks';
+
 import TopBar from '../components/TopBar';
 import type { Task, Board, Column } from '../types/types';
 
@@ -28,18 +29,17 @@ interface TaskWithMeta extends Task {
 
 const MyTasks: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    boards,
-    boardColumns,
-    isDarkMode,
-    isAuthenticated,
-    boardTasks,
-    currentUser,
-    updateTask,
-    deleteTask,
-    setSelectedBoard,
+  const { isAuthenticated, currentUser } = useAuth();
+  const { boards, setSelectedBoard } = useBoards();
+  const { 
+    boardTasks, 
+    updateTask, 
+    deleteTask, 
     fetchAllTasks,
-  } = useBoardStore();
+    loading: tasksLoading 
+  } = useTasks();
+  const { boardColumns } = useColumns();
+  const { isDarkMode } = useUI();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -51,20 +51,21 @@ const MyTasks: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Fetch tasks on mount if boardTasks is empty
-  useEffect(() => {
-    if (isAuthenticated && Object.keys(boardTasks).length === 0 && currentUser) {
-      console.log('[MyTasks] boardTasks is empty, fetching all tasks for user:', currentUser.id);
-      setLoading(true);
-      fetchAllTasks()
-        .catch((err) => {
-          console.error('[MyTasks] Error fetching tasks:', err);
-          setError('Failed to load tasks. Please try again.');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    }
-  }, [isAuthenticated, boardTasks, currentUser, fetchAllTasks]);
+  // Replace the existing useEffect with:
+useEffect(() => {
+  if (isAuthenticated && Object.keys(boardTasks).length === 0 && currentUser) {
+    console.log('[MyTasks] boardTasks is empty, fetching all tasks for user:', currentUser.id);
+    setLoading(true);
+    fetchAllTasks()
+      .catch((err) => {
+        console.error('[MyTasks] Error fetching tasks:', err);
+        setError('Failed to load tasks. Please try again.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }
+}, [isAuthenticated, boardTasks, currentUser, fetchAllTasks]);
 
   // Extract user's tasks with metadata
   const myTasks = useMemo(() => {
@@ -462,7 +463,8 @@ const MyTasks: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Loading State */}
-        {loading && (
+        {(loading || tasksLoading) && (
+
           <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
             <div className="flex items-center space-x-2">
               <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>

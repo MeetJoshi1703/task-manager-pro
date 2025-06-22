@@ -15,6 +15,8 @@ export const createBoardSlice: StoreSlice<BoardState & BoardActions> = (set, get
   // INITIAL STATE
   // ================================
   ...getInitialBoardState(),
+    hasFetched: false, // Add this
+
 
   // ================================
   // STATE SETTERS
@@ -38,9 +40,18 @@ export const createBoardSlice: StoreSlice<BoardState & BoardActions> = (set, get
   // BOARD CRUD OPERATIONS
   // ================================
   fetchBoards: async () => {
+    const state = get();
+    
+    // BULLETPROOF: Check if already loading OR already fetched
+    if (state.loading || state.hasFetched) {
+      console.log('[Boards] Already fetched or loading, skipping...');
+      return;
+    }
+    
     set(() => ({ loading: true, error: null }));
     
     try {
+      console.log('[Boards] Starting fetch...');
       const boards = await boardService.getBoards();
       
       // Validate boards data
@@ -49,11 +60,20 @@ export const createBoardSlice: StoreSlice<BoardState & BoardActions> = (set, get
         console.warn('[Boards] Some boards failed validation and were filtered out');
       }
       
-      set(() => ({ boards: validBoards, loading: false }));
+      set(() => ({ 
+        boards: validBoards, 
+        loading: false,
+        hasFetched: true 
+      }));
+      
       logOperation('fetchBoards', { count: validBoards.length });
+      console.log('[Boards] Fetch completed successfully');
+      
     } catch (error: any) {
+      console.error('[Boards] Fetch failed:', error);
       logError('fetchBoards', error);
       handleApiError(error, get().logout, set);
+      set(() => ({ hasFetched: true })); // Mark as attempted even on error
     }
   },
 

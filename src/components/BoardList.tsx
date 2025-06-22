@@ -1,10 +1,12 @@
+// src/components/BoardList.tsx
 import React from 'react';
-import { useBoardStore } from '../store/boardStore';
+import { useBoards, useUI } from '../store/hooks';
 import BoardCard from './BoardCard';
 
 const BoardList: React.FC = () => {
-  const { viewMode, isDarkMode, getFilteredBoards } = useBoardStore();
-  const filteredBoards = getFilteredBoards();
+  // Use new hooks instead of useBoardStore
+  const { filteredBoards } = useBoards();
+  const { viewMode, isDarkMode } = useUI();
 
   if (filteredBoards.length === 0) {
     return (

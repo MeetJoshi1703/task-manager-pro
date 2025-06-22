@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useBoardStore } from '../index';
 
 export const useBoards = () => {
-  // Individual selectors for optimal performance - these are stable
+  // Individual selectors for optimal performance
   const boards = useBoardStore(state => state.boards);
   const selectedBoard = useBoardStore(state => state.selectedBoard);
   const searchTerm = useBoardStore(state => state.searchTerm);
@@ -19,17 +19,33 @@ export const useBoards = () => {
   const updateBoard = useBoardStore(state => state.updateBoard);
   const deleteBoard = useBoardStore(state => state.deleteBoard);
   const starBoard = useBoardStore(state => state.starBoard);
-  const getFilteredBoards = useBoardStore(state => state.getFilteredBoards);
   const clearError = useBoardStore(state => state.clearError);
+  const hasFetched = useBoardStore(state => state.hasFetched); // Add this
 
-  // Memoize computed properties
-  const computed = useMemo(() => ({
-    filteredBoards: getFilteredBoards(),
-    starredBoards: boards.filter(board => board.isStarred),
-    recentBoards: [...boards]
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      .slice(0, 4),
-  }), [boards, getFilteredBoards]);
+  // Compute filtered boards directly instead of using the store function
+  const computed = useMemo(() => {
+    // Filter boards inline instead of calling getFilteredBoards()
+    let filtered = boards;
+    
+    if (searchTerm) {
+      filtered = filtered.filter(board => 
+        board.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        board.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    if (filterPriority !== 'all') {
+      filtered = filtered.filter(board => board.priority === filterPriority);
+    }
+
+    return {
+      filteredBoards: filtered,
+      starredBoards: boards.filter(board => board.isStarred),
+      recentBoards: [...boards]
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .slice(0, 4),
+    };
+  }, [boards, searchTerm, filterPriority]); // Only depend on actual state values
 
   return {
     // State
@@ -39,7 +55,7 @@ export const useBoards = () => {
     filterPriority,
     loading,
     error,
-    
+    hasFetched,
     // Actions
     setSelectedBoard,
     setSearchTerm,
@@ -49,7 +65,6 @@ export const useBoards = () => {
     updateBoard,
     deleteBoard,
     starBoard,
-    getFilteredBoards,
     clearError,
     
     // Computed

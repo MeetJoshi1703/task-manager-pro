@@ -20,27 +20,27 @@ import {
   User as UserIcon,
   AlertCircle
 } from 'lucide-react';
-import { useBoardStore } from '../store/boardStore';
+import { useAuth, useBoards, useTasks, useMembers, useUI } from '../store/hooks';
+
 import { type Member } from '../services/memberService';
 import TopBar from '../components/TopBar';
 
 const TeamMembers: React.FC = () => {
-  const { 
-    boards, 
-    isDarkMode, 
-    isAuthenticated, 
-    boardTasks,
+    const { isAuthenticated } = useAuth();
+  const { boards, selectedBoard, setSelectedBoard } = useBoards();
+  const { boardTasks } = useTasks();
+  const {
     boardMembers,
-    membersLoading,
+    loading: membersLoading,
     error,
     fetchMembers,
     addMember,
     updateMemberRole,
     removeMember,
     clearError,
-    selectedBoard,
-    setSelectedBoard
-  } = useBoardStore();
+    hasFetched // Add this if you implement the hasFetched pattern
+  } = useMembers();
+  const { isDarkMode } = useUI();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -48,10 +48,12 @@ const TeamMembers: React.FC = () => {
 
   // Fetch members when component mounts or selectedBoard changes
   useEffect(() => {
-    if (isAuthenticated && selectedBoard?.id) {
-      fetchMembers(selectedBoard.id);
-    }
-  }, [isAuthenticated, selectedBoard?.id, fetchMembers]);
+  if (isAuthenticated && selectedBoard?.id && !hasFetched) {
+    fetchMembers(selectedBoard.id);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [isAuthenticated, selectedBoard?.id, hasFetched]);
+
 
   // If no board is selected, select the first one
   useEffect(() => {

@@ -1,4 +1,6 @@
-const API_BASE_URL =import.meta.env.VITE_API_URL ||  'http://localhost:5000/api';
+import type { Member, AddMemberData } from '../types/types';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('authToken');
@@ -7,24 +9,6 @@ const getAuthHeaders = () => {
     Authorization: `Bearer ${token}`,
   };
 };
-
-export interface Member {
-  id: string;
-  user_id: string;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
-  joined_at: string;
-  profiles: {
-    id: string;
-    full_name: string;
-    email: string;
-    avatar_url?: string;
-  };
-}
-
-export interface AddMemberData {
-  email: string;
-  role?: 'admin' | 'member' | 'viewer';
-}
 
 export const memberService = {
   async addMember(boardId: string, memberData: AddMemberData): Promise<Member> {
@@ -83,3 +67,4 @@ export const memberService = {
     }
   },
 };
+

@@ -21,53 +21,48 @@ import {
   X,
   PlusCircle
 } from 'lucide-react';
-import { useBoardStore } from '../store/boardStore';
+import { useAuth, useBoards, useTasks, useColumns, useUI } from '../store/hooks';
+
 import TopBar from '../components/TopBar';
 
 const dummyBoards = [];
 const dummyTasks = [];
 
 const Dashboard = () => {
+  const { isAuthenticated } = useAuth();
   const { 
     boards, 
+    fetchBoards,
+    setSelectedBoard,
+    hasFetched
+  } = useBoards();
+  const { boardTasks } = useTasks();
+  const { boardColumns } = useColumns();
+  const { 
     isDarkMode, 
     setCurrentView, 
-    setSelectedBoard, 
-    setShowNewBoardModal,
-    users,
-    fetchBoards,
-    boardTasks,
-    boardColumns,
-    isAuthenticated,
-    loading
-  } = useBoardStore();
+    openNewBoardModal
+  } = useUI();
+
   const navigate = useNavigate();
+  
+  // Keep your local state as is
   const [dashboardData, setDashboardData] = useState({
     boards: [],
     tasks: [],
     loading: true
   });
-
   const [hasInitialized, setHasInitialized] = useState(false);
 
   useEffect(() => {
-    if (hasInitialized) return;
+  if (hasInitialized) return;
 
-    const loadDashboardData = async () => {
-      try {
-        if (isAuthenticated) {
-          await fetchBoards();
-          setHasInitialized(true);
-        } else {
-          setDashboardData({
-            boards: dummyBoards,
-            tasks: dummyTasks,
-            loading: false
-          });
-          setHasInitialized(true);
-        }
-      } catch (error) {
-        console.error('Failed to load dashboard data, using dummy data:', error);
+  const loadDashboardData = async () => {
+    try {
+      if (isAuthenticated && !hasFetched) { // Add hasFetched check
+        await fetchBoards();
+        setHasInitialized(true);
+      } else {
         setDashboardData({
           boards: dummyBoards,
           tasks: dummyTasks,
@@ -75,10 +70,20 @@ const Dashboard = () => {
         });
         setHasInitialized(true);
       }
-    };
+    } catch (error) {
+      console.error('Failed to load dashboard data, using dummy data:', error);
+      setDashboardData({
+        boards: dummyBoards,
+        tasks: dummyTasks,
+        loading: false
+      });
+      setHasInitialized(true);
+    }
+  };
 
-    loadDashboardData();
-  }, [isAuthenticated, hasInitialized, fetchBoards]);
+  loadDashboardData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [isAuthenticated, hasInitialized, hasFetched]);
 
   useEffect(() => {
     if (!hasInitialized) return;
@@ -293,7 +298,7 @@ const Dashboard = () => {
   };
 
   // Empty state for when no data is loaded
-  if (dashboardData.loading || loading) {
+if (dashboardData.loading) { 
     return (
       <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
         <div className="text-center max-w-md mx-auto px-4">
@@ -305,7 +310,7 @@ const Dashboard = () => {
             No boards found. Create your first board to start organizing your projects and tasks!
           </p>
           <button
-            onClick={() => setShowNewBoardModal(true)}
+            onClick={openNewBoardModal}
             className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center mx-auto group"
           >
             <Plus className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
@@ -365,9 +370,10 @@ const Dashboard = () => {
           />
           <StatCard
             title="Team Members"
-            value={users.length || 5}
+            value={isAuthenticated ? boards.reduce((acc, board) => acc + (board.members?.length || 0), 0) || 0 : 5}
             subtitle="Active contributors"
             icon={Users}
+            trend={isAuthenticated ? "+15% efficiency" : "Demo data"}
             color="bg-gradient-to-br from-orange-500 to-orange-600"
             bgPattern={true}
           />

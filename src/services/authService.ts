@@ -1,12 +1,5 @@
 import { post, get } from '../utils/api';
-import type { AuthUser } from '../types/types';
-
-interface AuthResponse {
-  message: string;
-  user: AuthUser;
-  access_token: string;
-  refresh_token: string;
-}
+import type { AuthUser, AuthResponse } from '../types/types';
 
 export const authService = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
@@ -77,3 +70,4 @@ export const authService = {
     }
   },
 };
+

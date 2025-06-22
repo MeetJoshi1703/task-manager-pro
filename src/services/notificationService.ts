@@ -1,3 +1,5 @@
+import type { NotificationResponse } from '../types/types';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const getAuthHeaders = () => {
@@ -7,23 +9,6 @@ const getAuthHeaders = () => {
     Authorization: `Bearer ${token}`,
   };
 };
-
-export interface NotificationResponse {
-  id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  timestamp: string;
-  read: boolean;
-  action_url?: string;
-  avatar?: string;
-  board_id?: string;
-  user_id: string;
-  boards?: {
-    id: string;
-    title: string;
-  };
-}
 
 export const notificationService = {
   async getNotifications(): Promise<NotificationResponse[]> {
@@ -78,3 +63,4 @@ export const notificationService = {
     }
   },
 };
+

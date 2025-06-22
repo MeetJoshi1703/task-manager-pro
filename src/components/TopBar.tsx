@@ -12,7 +12,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useBoardStore } from '../store/boardStore';
+import { useAuth, useUI, useNotifications,useBoards } from '../store/hooks';
 
 interface TopBarProps {
   title: string;
@@ -29,26 +29,30 @@ const TopBar: React.FC<TopBarProps> = ({
   showViewToggle = false,
   showFilters = false 
 }) => {
+  // Use new modular hooks instead of monolithic store
+  const { isAuthenticated, currentUser, logout } = useAuth();
   const { 
-    searchTerm, 
-    setSearchTerm, 
-    filterPriority, 
-    setFilterPriority,
-    viewMode, 
-    setViewMode,
     isDarkMode, 
+    viewMode, 
     setIsDarkMode,
-    setShowNewBoardModal,
-    getUnreadNotificationCount,
-    currentUser,
-    isAuthenticated,
-    logout
-  } = useBoardStore();
+    setViewMode,
+    openNewBoardModal
+  } = useUI();
+
+  const { 
+      searchTerm,
+      filterPriority,
+      setSearchTerm,
+      setFilterPriority,
+    
+    } = useBoards();
+
+  const { unreadCount } = useNotifications(); 
   
   const navigate = useNavigate();
   const location = useLocation();
 
-  const unreadCount = getUnreadNotificationCount();
+  // const unreadCount = getUnreadNotificationCount();
 
   const handleNotificationClick = () => {
     navigate('/notifications');
@@ -60,13 +64,13 @@ const TopBar: React.FC<TopBarProps> = ({
 
   const handleLogout = async () => {
     if (window.confirm('Are you sure you want to logout?')) {
-      logout();
-      navigate('/login');
+      await logout();
+      navigate('/');
     }
   };
 
   const handleProfileClick = () => {
-    navigate('/settings'); // Or navigate to profile page if you have one
+    navigate('/settings');
   };
 
   // Get user initials for avatar
@@ -221,7 +225,7 @@ const TopBar: React.FC<TopBarProps> = ({
               {/* New Board Button - only show on relevant pages */}
               {(location.pathname === '/boards' || location.pathname === '/dashboard') && (
                 <button
-                  onClick={() => setShowNewBoardModal(true)}
+                  onClick={openNewBoardModal}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
                 >
                   <Plus className="w-4 h-4" />

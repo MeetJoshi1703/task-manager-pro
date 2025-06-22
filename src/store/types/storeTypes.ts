@@ -50,6 +50,8 @@ export interface BoardState {
   filterPriority: string;
   loading: boolean;
   error: string | null;
+    hasFetched: boolean; // Add this
+
 }
 
 export interface BoardActions {
@@ -72,6 +74,7 @@ export interface TaskState {
   boardTasks: Record<string, Task[]>; // columnId -> tasks
   loading: boolean;
   error: string | null;
+  
 }
 
 export interface TaskActions {
@@ -101,6 +104,7 @@ export interface ColumnState {
   boardColumns: Column[];
   loading: boolean;
   error: string | null;
+  hasFetched: boolean; 
 }
 
 export interface ColumnActions {
@@ -120,6 +124,8 @@ export interface MemberState {
   users: User[];
   loading: boolean;
   error: string | null;
+  hasFetched: boolean; // Add this
+
 }
 
 export interface MemberActions {
@@ -137,8 +143,9 @@ export interface NotificationState {
   notifications: Notification[];
   loading: boolean;
   error: string | null;
-}
+    hasFetched: boolean; // Add this flag
 
+}
 export interface NotificationActions {
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;

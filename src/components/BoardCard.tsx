@@ -5,13 +5,12 @@ import {
   CheckCircle, 
   Clock, 
   MoreHorizontal,
-  Zap,
   AlertCircle,
   Users,
   Calendar
 } from 'lucide-react';
 import type { Board } from '../types/types';
-import { useBoardStore } from '../store/boardStore';
+import { useBoards, useUI } from '../store/hooks';
 
 interface BoardCardProps {
   board: Board;
@@ -19,7 +18,9 @@ interface BoardCardProps {
 }
 
 const BoardCard: React.FC<BoardCardProps> = ({ board, viewMode }) => {
-  const { setSelectedBoard, isDarkMode, starBoard } = useBoardStore();
+  // Use new hooks instead of useBoardStore
+  const { setSelectedBoard, starBoard } = useBoards();
+  const { isDarkMode } = useUI();
   const navigate = useNavigate();
 
   const getPriorityColor = (priority: string) => {

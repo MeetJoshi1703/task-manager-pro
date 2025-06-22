@@ -17,26 +17,28 @@ import {
   Settings,
   MoreHorizontal
 } from 'lucide-react';
-import { useBoardStore } from '../store/boardStore';
+import { useAuth, useBoards, useNotifications, useUI } from '../store/hooks';
+
 import { useNavigate } from 'react-router-dom';
 import TopBar from '../components/TopBar';
 
 const Notifications: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const { boards, setSelectedBoard } = useBoards();
   const {
     notifications,
-    isDarkMode,
-    isAuthenticated,
-    notificationsLoading,
+    loading: notificationsLoading,
     error,
-    clearError,
     markNotificationAsRead,
     markAllNotificationsAsRead,
     deleteNotification,
-    getUnreadNotificationCount,
-    setSelectedBoard,
-    boards,
-    fetchNotifications
-  } = useBoardStore();
+    unreadCount,
+    fetchNotifications,
+    hasFetched,
+    clearError
+  } = useNotifications();
+  const { isDarkMode } = useUI();
+
 
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,15 +47,18 @@ const Notifications: React.FC = () => {
   const [hasInitialized, setHasInitialized] = useState(false);
 
   // Fetch notifications when component mounts (only once)
-  useEffect(() => {
-    if (isAuthenticated && !hasInitialized) {
-      fetchNotifications().finally(() => {
-        setHasInitialized(true);
-      });
-    } else if (!isAuthenticated) {
+  // In your Notifications component:
+useEffect(() => {
+  if (isAuthenticated && !hasInitialized && !hasFetched) { // Add hasFetched check
+    console.log('[Notifications Component] Calling fetchNotifications...');
+    fetchNotifications().finally(() => {
       setHasInitialized(true);
-    }
-  }, [isAuthenticated, hasInitialized]); // Removed fetchNotifications from dependencies
+    });
+  } else if (!isAuthenticated) {
+    setHasInitialized(true);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [isAuthenticated, hasInitialized, hasFetched]);
 
   // Filter notifications based on search and filters
   const filteredNotifications = useMemo(() => {
@@ -78,7 +83,7 @@ const Notifications: React.FC = () => {
     );
   }, [filteredNotifications]);
 
-  const unreadCount = getUnreadNotificationCount();
+  
 
   const getNotificationIcon = (type: string) => {
     switch (type) {

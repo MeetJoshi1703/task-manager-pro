@@ -14,7 +14,14 @@ import {
 export const createTaskSlice: StoreSlice<TaskState & TaskActions> = (set, get) => ({
 
   ...getInitialTaskState(),
+  hasFetched: {}, // Add this
+
   fetchTasks: async (columnId) => {
+    const state = get();
+    if (state.loading || state.hasFetched[columnId]) {
+      console.log(`[Tasks] Already fetched or loading for column ${columnId}, skipping...`);
+      return;
+    }
     set(() => ({ loading: true, error: null }));
     
     try {
@@ -22,11 +29,9 @@ export const createTaskSlice: StoreSlice<TaskState & TaskActions> = (set, get) =
       const validTasks = (tasks || []).filter(isValidTask);
       
       set((state) => ({
-        boardTasks: {
-          ...state.boardTasks,
-          [columnId]: validTasks,
-        },
+        boardTasks: { ...state.boardTasks, [columnId]: tasks },
         loading: false,
+        hasFetched: { ...state.hasFetched, [columnId]: true },
       }));
       
       logOperation('fetchTasks', { columnId, count: validTasks.length });

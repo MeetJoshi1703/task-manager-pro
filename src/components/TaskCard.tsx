@@ -13,14 +13,18 @@ import {
   Save
 } from 'lucide-react';
 import type { Task } from '../types/types';
-import { useBoardStore } from '../store/boardStore';
+import { useUI, useTasks, useMembers } from '../store/hooks';
 
 interface TaskCardProps {
   task: Task;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
-  const { isDarkMode, updateTask, deleteTask, users } = useBoardStore();
+  // Use new modular hooks instead of monolithic store
+  const { isDarkMode } = useUI();
+  const { updateTask, deleteTask } = useTasks();
+  const { users } = useMembers();
+  
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     title: task.title,
@@ -51,9 +55,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     }
   };
 
-  const handleSave = () => {
-    updateTask(task.id, editForm);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      await updateTask(task.id, editForm);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to update task:', error);
+    }
   };
 
   const handleCancel = () => {
@@ -68,9 +76,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     setIsEditing(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this task?')) {
-      deleteTask(task.id);
+      try {
+        await deleteTask(task.id);
+      } catch (error) {
+        console.error('Failed to delete task:', error);
+      }
     }
   };
 
@@ -218,15 +230,16 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
         <div className="flex items-center space-x-2">
           {task.assignedTo.length > 0 && (
             <div className="flex -space-x-1">
-              {task.assignedTo.slice(0, 2).map((assignee, index) => {
-                const user = users.find(u => u.name === assignee);
+              {task.assignedTo.slice(0, 2).map((assigneeId, index) => {
+                const user = users.find(u => u.id === assigneeId);
+                const displayName = user?.name || user?.email || 'User';
                 return (
                   <div
                     key={index}
                     className={`w-6 h-6 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} rounded-full flex items-center justify-center text-xs font-medium border-2 ${isDarkMode ? 'border-gray-800' : 'border-white'}`}
-                    title={assignee}
+                    title={displayName}
                   >
-                    {user?.avatar || assignee.charAt(0)}
+                    {user?.avatar || displayName.charAt(0).toUpperCase()}
                   </div>
                 );
               })}
