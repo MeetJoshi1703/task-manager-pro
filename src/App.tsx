@@ -3,7 +3,7 @@ import { X, Save, Tag, Kanban, ArrowRight } from 'lucide-react';
 import { useBoardStore } from './store/boardStore';
 import BoardView from './pages/BoardView';
 import BoardDetail from './pages/BoardDetail';
-import Dashboard from './pages/Dashboard';
+import Dashboard from './pages/DashBoard';
 import Calendar from './pages/Calendar';
 import TeamMembers from './pages/TeamMembers';
 import MyTasks from './pages/MyTasks';
