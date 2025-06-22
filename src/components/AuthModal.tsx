@@ -1,5 +1,3 @@
-// Save this as: src/components/AuthModal.tsx
-
 import React, { useState } from 'react';
 import { 
   X, 
@@ -46,7 +44,7 @@ const AuthModal: React.FC = () => {
       if (authMode === 'login') {
         const result = await login(formData.email, formData.password);
         if (!result.success) {
-          setError(result.error || 'Login failed');
+          setError(result.error || 'Invalid email or password');
         }
       } else {
         if (formData.password !== formData.confirmPassword) {
@@ -54,13 +52,18 @@ const AuthModal: React.FC = () => {
           setIsLoading(false);
           return;
         }
+        if (formData.password.length < 6) {
+          setError('Password must be at least 6 characters long');
+          setIsLoading(false);
+          return;
+        }
         const result = await signup(formData.name, formData.email, formData.password);
         if (!result.success) {
-          setError(result.error || 'Signup failed');
+          setError(result.error || 'Failed to create account');
         }
       }
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -209,7 +212,7 @@ const AuthModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -276,7 +279,7 @@ const AuthModal: React.FC = () => {
               {authMode === 'login' ? "Don't have an account?" : "Already have an account?"}
               <button
                 onClick={() => switchMode(authMode === 'login' ? 'signup' : 'login')}
-                className="ml-2 text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                className="ml-2 text-blue-600 hover:text-blue-700 dark:hover:text-blue-500 font-medium transition-colors"
               >
                 {authMode === 'login' ? 'Sign up' : 'Sign in'}
               </button>

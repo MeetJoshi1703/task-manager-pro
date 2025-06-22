@@ -1,11 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Star, 
   CheckCircle, 
   Clock, 
   MoreHorizontal,
   Zap,
-  AlertCircle
+  AlertCircle,
+  Users,
+  Calendar
 } from 'lucide-react';
 import type { Board } from '../types/types';
 import { useBoardStore } from '../store/boardStore';
@@ -16,7 +19,8 @@ interface BoardCardProps {
 }
 
 const BoardCard: React.FC<BoardCardProps> = ({ board, viewMode }) => {
-  const { setSelectedBoard, setCurrentView, isDarkMode, starBoard } = useBoardStore();
+  const { setSelectedBoard, isDarkMode, starBoard } = useBoardStore();
+  const navigate = useNavigate();
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -38,7 +42,7 @@ const BoardCard: React.FC<BoardCardProps> = ({ board, viewMode }) => {
 
   const handleBoardClick = () => {
     setSelectedBoard(board);
-    setCurrentView('board-detail');
+    navigate(`/boards/${board.id}`);
   };
 
   const handleStarClick = (e: React.MouseEvent) => {
@@ -76,15 +80,15 @@ const BoardCard: React.FC<BoardCardProps> = ({ board, viewMode }) => {
         <td className="px-6 py-4 whitespace-nowrap">
           <div className="flex items-center">
             <div 
-              className={`w-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-2 mr-2`} 
-              style={{width: '100px'}}
+              className={`w-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-2 mr-2`}
+              style={{ width: '100px' }}
             >
               <div 
-                className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-300"
+                className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
                 style={{ width: `${progressPercentage}%` }}
               ></div>
             </div>
-            <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            <span className="text-sm font-medium">
               {board.completedTasks}/{board.taskCount}
             </span>
           </div>
@@ -94,8 +98,8 @@ const BoardCard: React.FC<BoardCardProps> = ({ board, viewMode }) => {
           <div className="flex -space-x-2">
             {board.members.slice(0, 3).map((member, index) => (
               <div 
-                key={index} 
-                className={`w-8 h-8 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} rounded-full flex items-center justify-center text-sm font-medium border-2 ${isDarkMode ? 'border-gray-800' : 'border-white'}`}
+                key={index}
+                className={`w-8 h-8 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} rounded-full flex items-center justify-center text-xs font-medium border-2 ${isDarkMode ? 'border-gray-800' : 'border-white'}`}
                 title={member}
               >
                 {member.charAt(0)}
@@ -109,23 +113,32 @@ const BoardCard: React.FC<BoardCardProps> = ({ board, viewMode }) => {
           </div>
         </td>
         
-        <td className="px-6 py-4 whitespace-nowrap">
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleStarClick}
-              className={`p-1 rounded transition-colors ${board.isStarred ? 'text-yellow-500' : isDarkMode ? 'text-gray-400 hover:text-yellow-400' : 'text-gray-400 hover:text-yellow-500'}`}
-            >
-              <Star className={`w-4 h-4 ${board.isStarred ? 'fill-current' : ''}`} />
-            </button>
-            <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              {board.updatedAt}
-            </span>
+        <td className="px-6 py-4 whitespace-nowrap text-sm">
+          <div className="flex items-center space-x-1">
+            <Calendar className="w-4 h-4" />
+            <span>{new Date(board.updatedAt).toLocaleDateString()}</span>
           </div>
         </td>
         
         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-          <button 
-            className={`${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-600'} transition-colors`}
+          <button
+            onClick={handleStarClick}
+            className={`p-2 rounded-lg transition-colors mr-2 ${
+              board.isStarred 
+                ? 'text-yellow-500' 
+                : isDarkMode 
+                  ? 'text-gray-400 hover:text-yellow-400' 
+                  : 'text-gray-400 hover:text-yellow-500'
+            }`}
+          >
+            <Star className={`w-4 h-4 ${board.isStarred ? 'fill-current' : ''}`} />
+          </button>
+          <button
+            className={`p-2 rounded-lg transition-colors ${
+              isDarkMode 
+                ? 'text-gray-400 hover:text-white' 
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             <MoreHorizontal className="w-5 h-5" />
@@ -139,14 +152,22 @@ const BoardCard: React.FC<BoardCardProps> = ({ board, viewMode }) => {
   return (
     <div
       onClick={handleBoardClick}
-      className={`${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 border-gray-700' : 'bg-white hover:bg-gray-50 border-gray-200'} rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border overflow-hidden group`}
+      className={`${
+        isDarkMode 
+          ? 'bg-gray-800 hover:bg-gray-700 border-gray-700' 
+          : 'bg-white hover:bg-gray-50 border-gray-200'
+      } rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border overflow-hidden group`}
     >
       {/* Card Header with Gradient */}
       <div className={`h-32 ${board.color} relative`}>
         <div className="absolute top-4 right-4 flex space-x-2">
           <button
             onClick={handleStarClick}
-            className={`p-1 rounded transition-colors ${board.isStarred ? 'text-yellow-300' : 'text-white/70 hover:text-yellow-300'}`}
+            className={`p-1 rounded transition-colors ${
+              board.isStarred 
+                ? 'text-yellow-300' 
+                : 'text-white/70 hover:text-yellow-300'
+            }`}
           >
             <Star className={`w-4 h-4 ${board.isStarred ? 'fill-current' : ''}`} />
           </button>
@@ -194,27 +215,28 @@ const BoardCard: React.FC<BoardCardProps> = ({ board, viewMode }) => {
               <span>{board.completedTasks}/{board.taskCount}</span>
             </div>
             <div className={`flex items-center space-x-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              <Clock className="w-4 h-4" />
-              <span>{board.updatedAt}</span>
+              <Users className="w-4 h-4" />
+              <span>{board.members.length}</span>
             </div>
+          </div>
+          <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            {new Date(board.updatedAt).toLocaleDateString()}
           </div>
         </div>
         
         {/* Progress Bar */}
-        <div className="mt-4">
-          <div className={`w-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-2`}>
-            <div 
-              className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progressPercentage}%` }}
-            ></div>
-          </div>
-          <div className="flex justify-between items-center mt-2">
-            <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              Progress
-            </span>
-            <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs">
+            <span className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>Progress</span>
+            <span className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>
               {Math.round(progressPercentage)}%
             </span>
+          </div>
+          <div className={`w-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-2`}>
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300" 
+              style={{ width: `${progressPercentage}%` }}
+            ></div>
           </div>
         </div>
       </div>

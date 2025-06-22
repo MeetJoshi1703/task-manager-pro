@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Bell,
   Check,
@@ -18,24 +18,42 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { useBoardStore } from '../store/boardStore';
+import { useNavigate } from 'react-router-dom';
 import TopBar from '../components/TopBar';
 
 const Notifications: React.FC = () => {
   const {
     notifications,
     isDarkMode,
+    isAuthenticated,
+    notificationsLoading,
+    error,
+    clearError,
     markNotificationAsRead,
     markAllNotificationsAsRead,
     deleteNotification,
     getUnreadNotificationCount,
-    setCurrentView,
     setSelectedBoard,
-    boards
+    boards,
+    fetchNotifications
   } = useBoardStore();
 
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'unread' | 'read'>('all');
   const [filterCategory, setFilterCategory] = useState<'all' | 'info' | 'success' | 'warning' | 'error'>('all');
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Fetch notifications when component mounts (only once)
+  useEffect(() => {
+    if (isAuthenticated && !hasInitialized) {
+      fetchNotifications().finally(() => {
+        setHasInitialized(true);
+      });
+    } else if (!isAuthenticated) {
+      setHasInitialized(true);
+    }
+  }, [isAuthenticated, hasInitialized]); // Removed fetchNotifications from dependencies
 
   // Filter notifications based on search and filters
   const filteredNotifications = useMemo(() => {
@@ -97,9 +115,9 @@ const Notifications: React.FC = () => {
     return date.toLocaleDateString();
   };
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = async (notification: any) => {
     if (!notification.read) {
-      markNotificationAsRead(notification.id);
+      await markNotificationAsRead(notification.id);
     }
 
     // Navigate to related board if available
@@ -107,10 +125,56 @@ const Notifications: React.FC = () => {
       const board = boards.find(b => b.id === notification.boardId);
       if (board) {
         setSelectedBoard(board);
-        setCurrentView('board-detail');
+        navigate('/boards');
       }
     }
   };
+
+  const handleMarkAllAsRead = async () => {
+    if (unreadCount > 0) {
+      await markAllNotificationsAsRead();
+    }
+  };
+
+  const handleDeleteNotification = async (notificationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this notification?')) {
+      await deleteNotification(notificationId);
+    }
+  };
+
+  // Loading state
+  if (notificationsLoading && notifications.length === 0 && hasInitialized) {
+    return (
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50'}`}>
+        <TopBar title="Notifications" subtitle="Loading notifications..." />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+            <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading notifications...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state for unauthenticated users
+  if (!isAuthenticated) {
+    return (
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50'}`}>
+        <TopBar title="Notifications" subtitle="Sign in to view notifications" />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <Bell className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <h3 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              Sign in to view notifications
+            </h3>
+            <p className="text-gray-500">You need to be authenticated to view notifications.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const NotificationCard = ({ notification }: { notification: any }) => (
     <div
@@ -151,10 +215,10 @@ const Notifications: React.FC = () => {
                   <Clock className="w-3 h-3 mr-1" />
                   {formatTimestamp(notification.timestamp)}
                 </span>
-                {notification.boardId && (
+                {notification.boardId && notification.boardTitle && (
                   <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} flex items-center`}>
                     <ExternalLink className="w-3 h-3 mr-1" />
-                    View Board
+                    {notification.boardTitle}
                   </span>
                 )}
               </div>
@@ -175,10 +239,7 @@ const Notifications: React.FC = () => {
                 </button>
               )}
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteNotification(notification.id);
-                }}
+                onClick={(e) => handleDeleteNotification(notification.id, e)}
                 className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'} transition-colors text-red-500`}
                 title="Delete notification"
               >
@@ -199,6 +260,22 @@ const Notifications: React.FC = () => {
       />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <p className="text-red-600 dark:text-red-400 text-sm font-medium">{error}</p>
+              <button 
+                onClick={clearError}
+                className="ml-auto text-red-600 hover:text-red-700"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="flex items-center space-x-4">
@@ -254,14 +331,16 @@ const Notifications: React.FC = () => {
           <div className="flex items-center space-x-3">
             {unreadCount > 0 && (
               <button
-                onClick={markAllNotificationsAsRead}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={handleMarkAllAsRead}
+                disabled={notificationsLoading}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
                 <CheckCheck className="w-4 h-4" />
                 <span>Mark All Read</span>
               </button>
             )}
             <button
+              onClick={() => navigate('/settings')}
               className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'} transition-colors`}
               title="Notification settings"
             >
@@ -365,10 +444,10 @@ const Notifications: React.FC = () => {
             <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Quick Actions</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button
-                onClick={markAllNotificationsAsRead}
-                disabled={unreadCount === 0}
+                onClick={handleMarkAllAsRead}
+                disabled={unreadCount === 0 || notificationsLoading}
                 className={`flex items-center justify-center space-x-2 p-4 rounded-lg border ${
-                  unreadCount > 0
+                  unreadCount > 0 && !notificationsLoading
                     ? 'border-blue-300 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20'
                     : 'border-gray-300 text-gray-400 cursor-not-allowed dark:border-gray-600 dark:text-gray-500'
                 } transition-colors`}
@@ -390,7 +469,7 @@ const Notifications: React.FC = () => {
               </button>
               
               <button
-                onClick={() => setCurrentView('settings')}
+                onClick={() => navigate('/settings')}
                 className={`flex items-center justify-center space-x-2 p-4 rounded-lg border ${
                   isDarkMode 
                     ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
@@ -406,5 +485,6 @@ const Notifications: React.FC = () => {
       </div>
     </div>
   );
-}
-  export default Notifications;
+};
+
+export default Notifications;

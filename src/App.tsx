@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Save, Tag, Kanban, ArrowRight } from 'lucide-react';
 import { useBoardStore } from './store/boardStore';
 import BoardView from './pages/BoardView';
@@ -12,7 +12,9 @@ import Sidebar from './components/Sidebar';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import AuthModal from './components/AuthModal';
+import AddMemberModal from './components/AddMemberModal';
 import type { CreateBoardData, CreateTaskData, CreateColumnData } from './types/types';
+// import { default as NewTaskModal } from './components/TaskModal';
 
 // Landing Page Component for Unauthenticated Users
 const LandingPage: React.FC = () => {
@@ -162,23 +164,48 @@ const LandingPage: React.FC = () => {
 const App: React.FC = () => {
   const { 
     isAuthenticated,
-    currentView,
     isDarkMode,
     showNewBoardModal,
     setShowNewBoardModal,
-    showNewTaskModal,
-    setShowNewTaskModal,
     showNewColumnModal,
     setShowNewColumnModal,
-    selectedColumn,
     selectedBoard,
     createBoard,
-    createTask,
     createColumn,
-    users
+    checkAuthStatus
   } = useBoardStore();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Check authentication status on app startup
+  useEffect(() => {
+    const initializeAuth = async () => {
+      await checkAuthStatus();
+      setIsCheckingAuth(false);
+    };
+    
+    initializeAuth();
+  }, [checkAuthStatus]);
+
+  // Show loading screen while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <Kanban className="w-8 h-8 text-white" />
+          </div>
+          <h2 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            TaskFlow
+          </h2>
+          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Loading...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Show landing page if not authenticated
   if (!isAuthenticated) {
@@ -325,199 +352,6 @@ const App: React.FC = () => {
     );
   };
 
-  // New Task Modal
-  const NewTaskModal = () => {
-    const [formData, setFormData] = useState<CreateTaskData>({
-      title: '',
-      description: '',
-      priority: 'medium',
-      dueDate: '',
-      assignedTo: [],
-      tags: []
-    });
-    const [tagInput, setTagInput] = useState('');
-
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (formData.title.trim() && selectedColumn) {
-        createTask(selectedColumn, formData);
-        setFormData({
-          title: '',
-          description: '',
-          priority: 'medium',
-          dueDate: '',
-          assignedTo: [],
-          tags: []
-        });
-        setTagInput('');
-      }
-    };
-
-    const handleClose = () => {
-      setShowNewTaskModal(false);
-      setFormData({
-        title: '',
-        description: '',
-        priority: 'medium',
-        dueDate: '',
-        assignedTo: [],
-        tags: []
-      });
-      setTagInput('');
-    };
-
-    const addTag = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && tagInput.trim()) {
-        e.preventDefault();
-        if (!formData.tags.includes(tagInput.trim())) {
-          setFormData({ ...formData, tags: [...formData.tags, tagInput.trim()] });
-        }
-        setTagInput('');
-      }
-    };
-
-    const removeTag = (tagToRemove: string) => {
-      setFormData({ ...formData, tags: formData.tags.filter(tag => tag !== tagToRemove) });
-    };
-
-    if (!showNewTaskModal) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto`}>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">Create New Task</h2>
-              <button
-                onClick={handleClose}
-                className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Task Title *</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className={`w-full px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                  placeholder="Enter task title..."
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className={`w-full px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                  placeholder="Task description..."
-                  rows={3}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Priority</label>
-                  <select
-                    value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: e.target.value as CreateTaskData['priority'] })}
-                    className={`w-full px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-blue-500`}
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-2">Due Date</label>
-                  <input
-                    type="date"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                    className={`w-full px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-blue-500`}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Assign To</label>
-                <select
-                  multiple
-                  value={formData.assignedTo}
-                  onChange={(e) => setFormData({ ...formData, assignedTo: Array.from(e.target.selectedOptions, option => option.value) })}
-                  className={`w-full px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-blue-500`}
-                  size={3}
-                >
-                  {users.map((user) => (
-                    <option key={user.id} value={user.name}>
-                      {user.avatar} {user.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Tags</label>
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={addTag}
-                  className={`w-full px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                  placeholder="Add tags... (Press Enter to add)"
-                />
-                {formData.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {formData.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className={`px-2 py-1 text-xs rounded ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'} flex items-center space-x-1`}
-                      >
-                        <Tag className="w-3 h-3" />
-                        <span>{tag}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeTag(tag)}
-                          className="hover:text-red-500 ml-1"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className={`flex-1 px-4 py-2 rounded-lg border ${isDarkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-50'} transition-colors`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200"
-                >
-                  Create Task
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   // New Column Modal
   const NewColumnModal = () => {
     const [formData, setFormData] = useState<CreateColumnData>({
@@ -617,7 +451,7 @@ const App: React.FC = () => {
     );
   };
 
-return (
+  return (
     <Router>
       <div className={`font-sans flex h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
         {/* Sidebar */}
@@ -646,9 +480,10 @@ return (
 
         {/* Modals */}
         <NewBoardModal />
-        <NewTaskModal />
+        {/* <NewTaskModal /> */}
         <NewColumnModal />
         <AuthModal />
+         <AddMemberModal />
       </div>
     </Router>
   );

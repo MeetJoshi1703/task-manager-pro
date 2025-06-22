@@ -32,7 +32,19 @@ const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed = false, 
   onToggleCollapse 
 }) => {
-  const { isDarkMode, setShowNewBoardModal, boards } = useBoardStore();
+  const { 
+    isDarkMode, 
+    setShowNewBoardModal, 
+    boards, 
+    currentUser, 
+    isAuthenticated, 
+    logout,
+    boardMembers,
+    boardTasks,
+    notifications,
+    getUnreadNotificationCount
+  } = useBoardStore();
+  
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -41,7 +53,31 @@ const Sidebar: React.FC<SidebarProps> = ({
     location.pathname === '/dashboard' ? 'dashboard' :
     location.pathname === '/calendar' ? 'calendar' :
     location.pathname === '/team' ? 'team' :
-    location.pathname === '/tasks' ? 'tasks' : '';
+    location.pathname === '/tasks' ? 'tasks' : 
+    location.pathname === '/notifications' ? 'notifications' :
+    location.pathname === '/settings' ? 'settings' : '';
+
+  // Calculate real counts
+  const totalBoards = boards.length;
+  const totalMembers = boardMembers.length;
+  const unreadNotifications = getUnreadNotificationCount();
+  
+  // Calculate user's tasks count
+  const userTasksCount = React.useMemo(() => {
+    if (!currentUser?.id) return 0;
+    
+    let count = 0;
+    Object.values(boardTasks).forEach(columnTasks => {
+      if (Array.isArray(columnTasks)) {
+        columnTasks.forEach(task => {
+          if (task.assignees?.includes(currentUser.id) || task.created_by === currentUser.id) {
+            count++;
+          }
+        });
+      }
+    });
+    return count;
+  }, [boardTasks, currentUser?.id]);
 
   const navigationItems = [
     {
@@ -49,7 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       title: 'Main',
       items: [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, badge: null, comingSoon: false, path: '/dashboard' },
-        { id: 'boards', label: 'Boards', icon: Kanban, badge: boards.length.toString(), comingSoon: false, path: '/boards' },
+        { id: 'boards', label: 'Boards', icon: Kanban, badge: totalBoards > 0 ? totalBoards.toString() : null, comingSoon: false, path: '/boards' },
         { id: 'calendar', label: 'Calendar', icon: Calendar, badge: null, comingSoon: false, path: '/calendar' },
         // { id: 'analytics', label: 'Analytics', icon: BarChart3, badge: null, comingSoon: true, path: '/analytics' },
       ]
@@ -58,21 +94,21 @@ const Sidebar: React.FC<SidebarProps> = ({
       section: 'workspace',
       title: 'Workspace',
       items: [
-        { id: 'team', label: 'Team Members', icon: Users, badge: '5', comingSoon: false, path: '/team' },
+        { id: 'team', label: 'Team Members', icon: Users, badge: totalMembers > 0 ? totalMembers.toString() : null, comingSoon: false, path: '/team' },
         // { id: 'projects', label: 'Projects', icon: FolderOpen, badge: null, comingSoon: true, path: '/projects' },
-        { id: 'tasks', label: 'My Tasks', icon: Target, badge: '12', comingSoon: false, path: '/tasks' },
+        { id: 'tasks', label: 'My Tasks', icon: Target, badge: userTasksCount > 0 ? userTasksCount.toString() : null, comingSoon: false, path: '/tasks' },
         // { id: 'recent', label: 'Recent Activity', icon: Clock, badge: null, comingSoon: true, path: '/recent' },
       ]
+    },
+    {
+      section: 'communication',
+      title: 'Communication',
+      items: [
+        // { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '2', comingSoon: true, path: '/messages' },
+        { id: 'notifications', label: 'Notifications', icon: Bell, badge: unreadNotifications > 0 ? unreadNotifications.toString() : null, comingSoon: false, path: '/notifications' },
+        // { id: 'documents', label: 'Documents', icon: FileText, badge: null, comingSoon: true, path: '/documents' },
+      ]
     }
-    // {
-    //   section: 'communication',
-    //   title: 'Communication',
-    //   items: [
-    //     { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '2', comingSoon: true, path: '/messages' },
-    //     { id: 'notifications', label: 'Notifications', icon: Bell, badge: '7', comingSoon: true, path: '/notifications' },
-    //     { id: 'documents', label: 'Documents', icon: FileText, badge: null, comingSoon: true, path: '/documents' },
-    //   ]
-    // },
     // {
     //   section: 'other',
     //   title: 'Other',
@@ -85,7 +121,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const bottomItems = [
     // { id: 'help', label: 'Help & Support', icon: HelpCircle, path: '/help' },
-    // { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
+    { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
   ];
 
   const handleNavClick = (path: string, comingSoon: boolean) => {
@@ -93,10 +129,33 @@ const Sidebar: React.FC<SidebarProps> = ({
     navigate(path);
   };
 
+  const handleLogout = async () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      logout();
+      navigate('/login');
+    }
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = (name?: string) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Don't render sidebar if user is not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className={`
       ${isCollapsed ? 'w-16' : 'w-64'} 
-      ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} 
+      ${isDarkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-200'} 
       border-r transition-all duration-300 ease-in-out flex flex-col h-screen
     `}>
       {/* Header */}
@@ -235,6 +294,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                         pointer-events-none whitespace-nowrap z-50
                       `}>
                         {item.label}
+                        {item.badge && (
+                          <span className="ml-2 text-blue-400">({item.badge})</span>
+                        )}
                         {item.comingSoon && (
                           <span className="ml-2 text-yellow-400">(Soon)</span>
                         )}
@@ -254,6 +316,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="space-y-1 mb-4">
           {bottomItems.map((item) => {
             const Icon = item.icon;
+            const isActive = activeSection === item.id;
+            
             return (
               <button
                 key={item.id}
@@ -261,9 +325,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                 className={`
                   w-full flex items-center rounded-lg transition-colors duration-200
                   ${isCollapsed ? 'p-3 justify-center' : 'px-3 py-2 justify-start'}
-                  ${isDarkMode 
-                    ? 'text-gray-300 hover:bg-gray-800 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100'
+                  ${isActive 
+                    ? isDarkMode 
+                      ? 'bg-blue-600 text-white shadow-lg' 
+                      : 'bg-blue-50 text-blue-600 border border-blue-200'
+                    : isDarkMode
+                      ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
                   }
                   group relative
                 `}
@@ -294,24 +362,49 @@ const Sidebar: React.FC<SidebarProps> = ({
           ${isCollapsed ? 'justify-center' : ''}
         `}>
           <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
-            J
+            {getUserInitials(currentUser?.name)}
           </div>
           
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">John Doe</p>
+              <p className="font-medium text-sm truncate">
+                {currentUser?.name || 'User'}
+              </p>
               <p className={`text-xs truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                john@company.com
+                {currentUser?.email || 'user@example.com'}
+              </p>
+              <p className={`text-xs capitalize ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {currentUser?.role || 'member'}
               </p>
             </div>
           )}
           
           {!isCollapsed && (
-            <button className={`
-              p-1 rounded transition-colors
-              ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}
-            `}>
+            <button 
+              onClick={handleLogout}
+              className={`
+                p-1 rounded transition-colors
+                ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}
+              `}
+              title="Logout"
+            >
               <LogOut className="w-4 h-4" />
+            </button>
+          )}
+          
+          {/* Logout button for collapsed state */}
+          {isCollapsed && (
+            <button 
+              onClick={handleLogout}
+              className={`
+                absolute left-full ml-2 px-2 py-1 rounded-lg text-sm font-medium
+                ${isDarkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-900 text-white hover:bg-gray-800'}
+                opacity-0 hover:opacity-100 transition-opacity duration-200
+                whitespace-nowrap z-50
+              `}
+              title="Logout"
+            >
+              Logout
             </button>
           )}
         </div>

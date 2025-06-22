@@ -1,222 +1,256 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useBoardStore } from '../store/boardStore';
 import { 
   ArrowLeft, 
+  Star, 
   Plus, 
+  Filter, 
+  Search, 
   Users, 
-  Calendar, 
-  BarChart3,
-  Star,
   Settings,
-  Moon,
-  Sun,
-  GripVertical
+  Calendar,
+  Edit3,
+  Trash2,
+  X,
+  Save,
+  Zap,
+  AlertCircle,
+  Clock,
+  CheckCircle
 } from 'lucide-react';
-import { useBoardStore } from '../store/boardStore';
-import Column from '../components/Column';
-
-// Move AddColumnModal outside the main component
-const AddColumnModal: React.FC = () => {
-  const [columnTitle, setColumnTitle] = useState('');
-  const { showNewColumnModal, setShowNewColumnModal, createColumn, selectedBoard, isDarkMode } = useBoardStore();
-  
-  if (!showNewColumnModal || !selectedBoard) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (columnTitle.trim()) {
-      createColumn(selectedBoard.id, {
-        title: columnTitle.trim(),
-        color: 'bg-gray-100' // Default color, you can make this customizable
-      });
-      setColumnTitle('');
-      setShowNewColumnModal(false);
-    }
-  };
-
-  const handleClose = () => {
-    setColumnTitle('');
-    setShowNewColumnModal(false);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} rounded-lg p-6 w-full max-w-md mx-4`}>
-        <h2 className="text-xl font-semibold mb-4">Add New Column</h2>
-        
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              Column Title
-            </label>
-            <input
-              type="text"
-              value={columnTitle}
-              onChange={(e) => setColumnTitle(e.target.value)}
-              placeholder="Enter column title..."
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isDarkMode 
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-              }`}
-              autoFocus
-            />
-          </div>
-          
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={handleClose}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                isDarkMode 
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-              }`}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!columnTitle.trim()}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
-            >
-              Add Column
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// Draggable Column Wrapper Component - Back to Working V1 Logic
-const DraggableColumn: React.FC<{ 
-  column: any; 
-  index: number; 
-  isDragOver: boolean;
-  onDragStart: (e: React.DragEvent, index: number) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDragEnter: (e: React.DragEvent, index: number) => void;
-  onDragLeave: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent, index: number) => void;
-  onDragEnd: (e: React.DragEvent) => void;
-  isDarkMode: boolean;
-}> = ({ 
-  column, 
-  index, 
-  isDragOver,
-  onDragStart, 
-  onDragOver, 
-  onDragEnter, 
-  onDragLeave, 
-  onDrop, 
-  onDragEnd,
-  isDarkMode 
-}) => {
-  const [isDragging, setIsDragging] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-
-  const handleDragStart = (e: React.DragEvent) => {
-    // Only allow dragging from the drag handle
-    const target = e.target as HTMLElement;
-    const isDragHandle = target.closest('.column-drag-handle');
-    
-    if (!isDragHandle) {
-      e.preventDefault();
-      return;
-    }
-    
-    setIsDragging(true);
-    onDragStart(e, index);
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    setIsDragging(false);
-    onDragEnd(e);
-  };
-
-  return (
-    <div
-      draggable={false}
-      onDragStart={handleDragStart}
-      onDragOver={onDragOver}
-      onDragEnter={(e) => onDragEnter(e, index)}
-      onDragLeave={onDragLeave}
-      onDrop={(e) => onDrop(e, index)}
-      onDragEnd={handleDragEnd}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={`
-        flex-shrink-0 w-80 relative transition-all duration-300 ease-out
-        ${isDragging ? 'opacity-60 scale-[0.98] rotate-1 z-50' : 'opacity-100 scale-100 rotate-0'}
-        ${isDragOver ? `transform scale-105 ${isDarkMode ? 'shadow-blue-400/30' : 'shadow-blue-500/30'} shadow-lg` : ''}
-        ${isHovered && !isDragging ? 'transform scale-[1.02]' : ''}
-      `}
-      style={{
-        filter: isDragging ? 'blur(1px)' : 'none',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-      }}
-    >
-      {/* Enhanced Drag Handle - Fixed positioning */}
-      <div 
-        draggable={true}
-        onDragStart={handleDragStart}
-        className={`
-        column-drag-handle absolute -left-3 top-6 z-20 p-2 rounded-lg shadow-md cursor-grab active:cursor-grabbing
-        ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600 border border-gray-600' : 'bg-white hover:bg-gray-50 border border-gray-200'} 
-        ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}
-        transition-all duration-200
-        hover:scale-110 active:scale-95
-      `}>
-        <GripVertical className={`w-4 h-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-      </div>
-      
-      {/* Drop Zone Indicator */}
-      {isDragOver && (
-        <div className={`
-          absolute inset-0 rounded-lg border-2 border-dashed pointer-events-none z-10
-          ${isDarkMode ? 'border-blue-400 bg-blue-900/10' : 'border-blue-500 bg-blue-50/50'}
-          animate-pulse
-        `}>
-          <div className={`
-            absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2
-            px-4 py-2 rounded-lg font-medium text-sm
-            ${isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}
-            shadow-lg
-          `}>
-            Drop column here
-          </div>
-        </div>
-      )}
-      
-      <div className="group">
-        <Column column={column} />
-      </div>
-    </div>
-  );
-};
+import TaskModal from '../components/TaskModal';
 
 const BoardDetail: React.FC = () => {
+  const { boardId } = useParams<{ boardId: string }>();
+  const navigate = useNavigate();
   const { 
     selectedBoard, 
-    setCurrentView, 
+    setSelectedBoard, 
+    boards, 
     isDarkMode, 
-    setIsDarkMode,
+    starBoard, 
+    loading, 
+    error,
+    fetchBoards,
+    fetchColumns,
+    fetchMembers,
     setShowNewColumnModal,
-    starBoard,
-    reorderColumns // You'll need to add this method to your store
+    setShowAddMemberModal,
+    boardMembers,
+    boardColumns,
+    columnsLoading,
+    boardTasks,
+    tasksLoading,
+    fetchTasks,
+    setShowNewTaskModal,
+    setSelectedColumn,
+    updateTask,
+    deleteTask
   } = useBoardStore();
 
-  const [draggedColumnIndex, setDraggedColumnIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [isLoadingBoard, setIsLoadingBoard] = useState(true);
+  const [editingTask, setEditingTask] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
+    due_date: ''
+  });
 
+  // Fetch tasks when columns are loaded
+  useEffect(() => {
+    if (boardColumns && boardColumns.length > 0) {
+      boardColumns.forEach(column => {
+        fetchTasks(column.id);
+      });
+    }
+  }, [boardColumns, fetchTasks]);
+
+  // Load board data
+  useEffect(() => {
+    const loadBoard = async () => {
+      if (!boardId) {
+        navigate('/boards');
+        return;
+      }
+
+      const existingBoard = boards.find(board => board.id === boardId);
+      
+      if (existingBoard) {
+        setSelectedBoard(existingBoard);
+        setIsLoadingBoard(false);
+        await Promise.all([
+          fetchColumns(boardId),
+          fetchMembers(boardId)
+        ]);
+      } else {
+        if (boards.length === 0) {
+          await fetchBoards();
+        }
+        
+        const board = boards.find(board => board.id === boardId);
+        if (board) {
+          setSelectedBoard(board);
+          await Promise.all([
+            fetchColumns(boardId),
+            fetchMembers(boardId)
+          ]);
+        } else {
+          navigate('/boards');
+          return;
+        }
+        setIsLoadingBoard(false);
+      }
+    };
+
+    loadBoard();
+  }, [boardId, boards, setSelectedBoard, navigate, fetchBoards, fetchColumns, fetchMembers]);
+
+  // Event handlers
+  const handleBack = () => navigate('/boards');
+  const handleStarBoard = () => selectedBoard && starBoard(selectedBoard.id);
+  const handleAddColumn = () => setShowNewColumnModal(true);
+  const handleAddMember = () => setShowAddMemberModal(true);
+  const handleAddTask = (columnId: string) => {
+    setSelectedColumn(columnId);
+    setShowNewTaskModal(true);
+  };
+
+  // Task editing handlers
+  const handleEditTask = (task: any) => {
+    setEditingTask(task.id);
+    setEditForm({
+      title: task.title,
+      description: task.description || '',
+      priority: task.priority,
+      due_date: task.due_date || ''
+    });
+  };
+
+  const handleSaveTask = async () => {
+    if (!editingTask) return;
+    
+    try {
+      await updateTask(editingTask, editForm);
+      setEditingTask(null);
+      setEditForm({ title: '', description: '', priority: 'medium', due_date: '' });
+    } catch (error) {
+      console.error('Failed to update task:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTask(null);
+    setEditForm({ title: '', description: '', priority: 'medium', due_date: '' });
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      try {
+        await deleteTask(taskId);
+      } catch (error) {
+        console.error('Failed to delete task:', error);
+      }
+    }
+  };
+
+  // Utility functions
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'critical': return <Zap className="w-3 h-3" />;
+      case 'high': return <AlertCircle className="w-3 h-3" />;
+      case 'medium': return <Clock className="w-3 h-3" />;
+      case 'low': return <CheckCircle className="w-3 h-3" />;
+      default: return <Clock className="w-3 h-3" />;
+    }
+  };
+
+  const formatDate = (date: string) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString();
+  };
+
+  // Calculate stats
+  const totalTasks = Object.values(boardTasks).reduce((total, tasks) => total + tasks.length, 0);
+  const completedTasks = Object.values(boardTasks).reduce((total, tasks) => 
+    total + tasks.filter(task => task.status === 'completed').length, 0
+  );
+
+  // Loading state
+  if (isLoadingBoard || loading) {
+    return (
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            Loading board...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
+        <div className="text-center">
+          <div className="text-4xl mb-4">⚠️</div>
+          <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Error Loading Board
+          </h3>
+          <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            {error}
+          </p>
+          <div className="space-x-3">
+            <button
+              onClick={handleBack}
+              className={`px-4 py-2 rounded-lg ${
+                isDarkMode 
+                  ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+              } transition-colors`}
+            >
+              Back to Boards
+            </button>
+            <button
+              onClick={() => fetchBoards()}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Board not found
   if (!selectedBoard) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} flex items-center justify-center`}>
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Board not found</h2>
+          <div className="text-4xl mb-4">📋</div>
+          <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Board Not Found
+          </h3>
+          <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            The board you're looking for doesn't exist or you don't have access to it.
+          </p>
           <button
-            onClick={() => setCurrentView('boards')}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+            onClick={handleBack}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
           >
             Back to Boards
           </button>
@@ -225,63 +259,195 @@ const BoardDetail: React.FC = () => {
     );
   }
 
-  const progressPercentage = selectedBoard.taskCount > 0 
-    ? Math.round((selectedBoard.completedTasks / selectedBoard.taskCount) * 100) 
-    : 0;
+  // Task Card Component
+  const TaskCard = ({ task, columnId }: { task: any; columnId: string }) => {
+    const isEditing = editingTask === task.id;
+    const isOverdue = task.due_date && new Date(task.due_date) < new Date();
 
-  // Back to V1 Working Drag Handlers
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedColumnIndex(index);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', index.toString());
-    
-    // Create a custom drag image
-    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
-    dragImage.style.transform = 'rotate(5deg)';
-    dragImage.style.opacity = '0.8';
-    document.body.appendChild(dragImage);
-    e.dataTransfer.setDragImage(dragImage, 0, 0);
-    setTimeout(() => document.body.removeChild(dragImage), 0);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDragEnter = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedColumnIndex !== null && draggedColumnIndex !== index) {
-      setDragOverIndex(index);
+    if (isEditing) {
+      return (
+        <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-3`}>
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={editForm.title}
+              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              className={`w-full px-3 py-2 text-sm rounded border ${
+                isDarkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white' 
+                  : 'bg-white border-gray-300 text-gray-900'
+              } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+              placeholder="Task title..."
+            />
+            
+            <textarea
+              value={editForm.description}
+              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              className={`w-full px-3 py-2 text-sm rounded border ${
+                isDarkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white' 
+                  : 'bg-white border-gray-300 text-gray-900'
+              } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+              placeholder="Task description..."
+              rows={2}
+            />
+            
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={editForm.priority}
+                onChange={(e) => setEditForm({ ...editForm, priority: e.target.value as any })}
+                className={`px-2 py-1 text-sm rounded border ${
+                  isDarkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+              
+              <input
+                type="date"
+                value={editForm.due_date}
+                onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value })}
+                className={`px-2 py-1 text-sm rounded border ${
+                  isDarkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={handleCancelEdit}
+                className={`px-3 py-1 text-sm rounded ${
+                  isDarkMode 
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                } transition-colors`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+              <button
+                onClick={handleSaveTask}
+                className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+              >
+                <Save className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
     }
-  };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    // Only clear dragOverIndex if we're actually leaving the drop zone
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX;
-    const y = e.clientY;
-    
-    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-      setDragOverIndex(null);
-    }
-  };
+    return (
+      <div
+        className={`${
+          isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
+        } border rounded-lg p-3 hover:shadow-md transition-all duration-200 cursor-pointer group`}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3">
+          <h4 className="font-medium text-sm leading-tight flex-1 pr-2">{task.title}</h4>
+          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditTask(task);
+              }}
+              className={`p-1 rounded ${
+                isDarkMode 
+                  ? 'hover:bg-gray-600 text-gray-400 hover:text-white' 
+                  : 'hover:bg-gray-100 text-gray-400 hover:text-gray-600'
+              } transition-colors`}
+            >
+              <Edit3 className="w-3 h-3" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteTask(task.id);
+              }}
+              className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
 
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    
-    if (draggedColumnIndex !== null && draggedColumnIndex !== dropIndex) {
-      // Call store method to reorder columns
-      reorderColumns(selectedBoard.id, draggedColumnIndex, dropIndex);
-    }
-    
-    setDraggedColumnIndex(null);
-    setDragOverIndex(null);
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    setDraggedColumnIndex(null);
-    setDragOverIndex(null);
+        {/* Description */}
+        {task.description && (
+          <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-3 line-clamp-2`}>
+            {task.description}
+          </p>
+        )}
+        
+        {/* Priority and Due Date */}
+        <div className="flex items-center justify-between mb-3">
+          <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(task.priority)} flex items-center space-x-1`}>
+            {getPriorityIcon(task.priority)}
+            <span className="capitalize">{task.priority}</span>
+          </span>
+          
+          {task.due_date && (
+            <div className={`text-xs flex items-center space-x-1 ${
+              isOverdue ? 'text-red-500' : isDarkMode ? 'text-gray-400' : 'text-gray-500'
+            }`}>
+              <Calendar className="w-3 h-3" />
+              <span>{formatDate(task.due_date)}</span>
+            </div>
+          )}
+        </div>
+        
+        {/* Assignees */}
+        {task.task_assignees && task.task_assignees.length > 0 && (
+          <div className="flex items-center justify-between">
+            <div className="flex -space-x-1">
+              {task.task_assignees.slice(0, 3).map((assignee: any, index: number) => (
+                <div 
+                  key={index} 
+                  className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs border-2 border-white"
+                  title={assignee.profiles?.full_name || 'User'}
+                >
+                  {assignee.profiles?.full_name?.charAt(0) || 'U'}
+                </div>
+              ))}
+              {task.task_assignees.length > 3 && (
+                <div className="w-6 h-6 rounded-full bg-gray-500 flex items-center justify-center text-white text-xs border-2 border-white">
+                  +{task.task_assignees.length - 3}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Tags */}
+        {task.task_tags && task.task_tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {task.task_tags.slice(0, 2).map((tagObj: any, index: number) => (
+              <span 
+                key={index} 
+                className={`text-xs px-2 py-1 rounded ${
+                  isDarkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-800'
+                }`}
+              >
+                {tagObj.tag}
+              </span>
+            ))}
+            {task.task_tags.length > 2 && (
+              <span className={`text-xs px-2 py-1 rounded ${
+                isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-600'
+              }`}>
+                +{task.task_tags.length - 2}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -290,12 +456,11 @@ const BoardDetail: React.FC = () => {
       <header className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-40`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Left side - Back button and board info */}
+            {/* Left side */}
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => setCurrentView('boards')}
+                onClick={handleBack}
                 className={`${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} p-2 rounded-lg transition-colors flex items-center space-x-2`}
-                title="Back to boards"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span className="hidden sm:inline">Back</span>
@@ -307,7 +472,7 @@ const BoardDetail: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <h1 className="text-xl font-semibold truncate">{selectedBoard.title}</h1>
                   <button
-                    onClick={() => starBoard(selectedBoard.id)}
+                    onClick={handleStarBoard}
                     className={`p-1 rounded transition-colors ${
                       selectedBoard.isStarred 
                         ? 'text-yellow-500' 
@@ -319,62 +484,50 @@ const BoardDetail: React.FC = () => {
                     <Star className={`w-4 h-4 ${selectedBoard.isStarred ? 'fill-current' : ''}`} />
                   </button>
                 </div>
-                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} truncate`}>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} truncate`}>
                   {selectedBoard.description}
                 </p>
               </div>
             </div>
-            
-            {/* Right side - Stats and actions */}
-            <div className="flex items-center space-x-4">
-              {/* Board Stats */}
-              <div className="hidden lg:flex items-center space-x-6">
-                <div className="flex items-center space-x-2">
-                  <BarChart3 className="w-4 h-4 text-green-500" />
-                  <span className="text-sm">{progressPercentage}% Complete</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm">Updated {selectedBoard.updatedAt}</span>
-                </div>
-              </div>
-              
-              {/* Team Members */}
+
+            {/* Right side */}
+            <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-2">
-                <Users className="w-4 h-4 text-gray-500" />
+                {/* Members */}
                 <div className="flex -space-x-2">
-                  {selectedBoard.members.slice(0, 4).map((member, index) => (
+                  {boardMembers.slice(0, 3).map((member, index) => (
                     <div 
-                      key={index} 
-                      className={`w-8 h-8 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} rounded-full flex items-center justify-center text-sm font-medium border-2 ${isDarkMode ? 'border-gray-800' : 'border-white'}`}
-                      title={member}
+                      key={member.id}
+                      className={`w-8 h-8 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} rounded-full flex items-center justify-center text-xs font-medium border-2 ${isDarkMode ? 'border-gray-800' : 'border-white'}`}
+                      title={member.profiles.full_name || member.profiles.email}
                     >
-                      {member.charAt(0)}
+                      {member.profiles.full_name?.charAt(0) || member.profiles.email.charAt(0)}
                     </div>
                   ))}
-                  {selectedBoard.members.length > 4 && (
+                  {boardMembers.length > 3 && (
                     <div className={`w-8 h-8 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} rounded-full flex items-center justify-center text-xs font-medium border-2 ${isDarkMode ? 'border-gray-800' : 'border-white'}`}>
-                      +{selectedBoard.members.length - 4}
+                      +{boardMembers.length - 3}
                     </div>
                   )}
                 </div>
-              </div>
-              
-              {/* Actions */}
-              <div className="flex items-center space-x-2">
+
                 <button
+                  onClick={handleAddMember}
                   className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
-                  title="Board settings"
                 >
-                  <Settings className="w-5 h-5" />
+                  <Users className="w-4 h-4" />
+                </button>
+
+                <button className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}>
+                  <Filter className="w-4 h-4" />
                 </button>
                 
-                <button
-                  onClick={() => setIsDarkMode(!isDarkMode)}
-                  className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
-                  title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-                >
-                  {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                <button className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}>
+                  <Search className="w-4 h-4" />
+                </button>
+                
+                <button className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}>
+                  <Settings className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -382,85 +535,169 @@ const BoardDetail: React.FC = () => {
         </div>
       </header>
 
-      {/* Progress Bar */}
-      <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Board Progress</span>
-            <span className="text-sm">{selectedBoard.completedTasks} of {selectedBoard.taskCount} tasks completed</span>
+      {/* Board Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border`}>
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">{totalTasks}</span>
+                </div>
+              </div>
+              <div className="ml-3">
+                <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Total Tasks
+                </p>
+              </div>
+            </div>
           </div>
-          <div className={`w-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-2`}>
-            <div 
-              className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${progressPercentage}%` }}
-            ></div>
+
+          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border`}>
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">{completedTasks}</span>
+                </div>
+              </div>
+              <div className="ml-3">
+                <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Completed
+                </p>
+              </div>
+            </div>
           </div>
+
+          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border`}>
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">{boardMembers.length}</span>
+                </div>
+              </div>
+              <div className="ml-3">
+                <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Team Members
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border`}>
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">
+                    {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+              <div className="ml-3">
+                <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Progress
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Kanban Board */}
+        <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl border p-6`}>
+          {columnsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+              <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading columns...</span>
+            </div>
+          ) : boardColumns && boardColumns.length > 0 ? (
+            <div className="flex space-x-6 overflow-x-auto pb-4">
+              {boardColumns
+                .sort((a, b) => a.position - b.position)
+                .map((column) => (
+                  <div key={column.id} className="flex-shrink-0 w-72">
+                    <div className={`${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-4`}>
+                      {/* Column Header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-medium">{column.title}</h3>
+                        <div className="flex items-center space-x-2">
+                          <span className={`text-xs px-2 py-1 rounded ${isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
+                            {boardTasks[column.id]?.length || 0}
+                          </span>
+                          <button 
+                            onClick={() => handleAddTask(column.id)}
+                            className={`p-1 rounded hover:${isDarkMode ? 'bg-gray-600' : 'bg-gray-200'} transition-colors`}
+                            title="Add task"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Tasks */}
+                      <div className="space-y-3 min-h-[200px]">
+                        {tasksLoading ? (
+                          <div className="text-center py-4">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                            <span className="text-xs text-gray-500">Loading tasks...</span>
+                          </div>
+                        ) : boardTasks[column.id] && boardTasks[column.id].length > 0 ? (
+                          boardTasks[column.id].map((task) => (
+                            <TaskCard key={task.id} task={task} columnId={column.id} />
+                          ))
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="text-2xl mb-2">📝</div>
+                            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              No tasks yet
+                            </p>
+                            <button
+                              onClick={() => handleAddTask(column.id)}
+                              className={`mt-2 text-xs ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-500'} transition-colors`}
+                            >
+                              Add your first task
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              
+              {/* Add Column Button */}
+              <div className="flex-shrink-0 w-72">
+                <button 
+                  onClick={handleAddColumn}
+                  className={`w-full h-32 border-2 border-dashed ${isDarkMode ? 'border-gray-600 hover:border-gray-500 text-gray-400' : 'border-gray-300 hover:border-gray-400 text-gray-500'} rounded-lg flex items-center justify-center transition-colors group`}
+                >
+                  <div className="text-center">
+                    <Plus className="w-6 h-6 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm font-medium">Add Column</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-4xl mb-4">📋</div>
+              <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                No columns yet
+              </h3>
+              <p className={`text-sm mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Add your first column to start organizing tasks.
+              </p>
+              <button 
+                onClick={handleAddColumn}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Add Column
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Board Content - Kanban Columns */}
-      <div className="p-6">
-        <div className="flex space-x-6 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
-          {selectedBoard.columns
-            .sort((a, b) => a.order - b.order)
-            .map((column, index) => (
-            <DraggableColumn
-              key={column.id}
-              column={column}
-              index={index}
-              isDragOver={dragOverIndex === index}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onDragEnd={handleDragEnd}
-              isDarkMode={isDarkMode}
-            />
-          ))}
-          
-          {/* Enhanced Add Column Button */}
-          <div className="flex-shrink-0 w-80">
-            <button 
-              onClick={() => setShowNewColumnModal(true)}
-              className={`
-                w-full p-6 border-2 border-dashed rounded-lg transition-all duration-200
-                flex flex-col items-center justify-center space-y-2 min-h-[200px] group
-                ${isDarkMode 
-                  ? 'border-gray-700 hover:border-gray-600 text-gray-400 hover:text-gray-300 hover:bg-gray-800/50' 
-                  : 'border-gray-300 hover:border-gray-400 text-gray-500 hover:text-gray-600 hover:bg-gray-50'
-                }
-                hover:scale-[1.02] hover:shadow-lg
-              `}
-            >
-              <Plus className="w-8 h-8 group-hover:scale-110 transition-transform duration-200" />
-              <span className="font-medium">Add Column</span>
-              <span className="text-sm opacity-75">Create a new list</span>
-            </button>
-          </div>
-        </div>
-        
-        {/* Empty state for boards with no columns */}
-        {selectedBoard.columns.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">📋</div>
-            <h3 className="text-xl font-semibold mb-2">Get started with your board</h3>
-            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-6`}>
-              Create columns like "To Do", "In Progress", and "Done" to organize your tasks
-            </p>
-            <button 
-              onClick={() => setShowNewColumnModal(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center space-x-2 mx-auto"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Create First Column</span>
-            </button>
-          </div>
-        )}
-      </div>
-      
-      {/* Add the modal at the end */}
-      <AddColumnModal />
+      {/* Task Modal */}
+      <TaskModal />
     </div>
   );
 };

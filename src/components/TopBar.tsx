@@ -8,7 +8,8 @@ import {
   Sun,
   Bell,
   User,
-  Settings
+  Settings,
+  LogOut
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useBoardStore } from '../store/boardStore';
@@ -38,8 +39,12 @@ const TopBar: React.FC<TopBarProps> = ({
     isDarkMode, 
     setIsDarkMode,
     setShowNewBoardModal,
-    getUnreadNotificationCount
+    getUnreadNotificationCount,
+    currentUser,
+    isAuthenticated,
+    logout
   } = useBoardStore();
+  
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -53,6 +58,63 @@ const TopBar: React.FC<TopBarProps> = ({
     navigate('/settings');
   };
 
+  const handleLogout = async () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      logout();
+      navigate('/login');
+    }
+  };
+
+  const handleProfileClick = () => {
+    navigate('/settings'); // Or navigate to profile page if you have one
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = (name?: string) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Get user role badge
+  const getUserRoleBadge = (role?: string) => {
+    if (!role) return 'Free';
+    
+    switch (role.toLowerCase()) {
+      case 'admin':
+        return 'Admin';
+      case 'owner':
+        return 'Owner';
+      case 'member':
+        return 'Pro';
+      case 'viewer':
+        return 'View';
+      default:
+        return 'Free';
+    }
+  };
+
+  const getBadgeColor = (role?: string) => {
+    if (!role) return 'bg-gray-100 text-gray-800';
+    
+    switch (role.toLowerCase()) {
+      case 'admin':
+        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
+      case 'owner':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400';
+      case 'member':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
+      case 'viewer':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+    }
+  };
+
   return (
     <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-40`}>
       {/* Main Header */}
@@ -63,66 +125,132 @@ const TopBar: React.FC<TopBarProps> = ({
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               TaskFlow
             </h1>
-            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full font-medium">Pro</span>
-          </div>
-          
-          {/* Header Actions */}
-          <div className="flex items-center space-x-3">
-            {/* Notifications */}
-            <button
-              onClick={handleNotificationClick}
-              className={`relative p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors ${
-                location.pathname === '/notifications' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : ''
-              }`}
-              title="Notifications"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center text-white font-medium">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
-
-            {/* Settings */}
-            <button
-              onClick={handleSettingsClick}
-              className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors ${
-                location.pathname === '/settings' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : ''
-              }`}
-              title="Settings"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-            
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
-              title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-            
-            {/* User Profile */}
-            <button className={`flex items-center space-x-2 p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}>
-              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
-                J
-              </div>
-              <span className="hidden md:block font-medium">John Doe</span>
-            </button>
-            
-            {/* New Board Button - only show on relevant pages */}
-            {(location.pathname === '/boards' || location.pathname === '/dashboard') && (
-              <button
-                onClick={() => setShowNewBoardModal(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">New Board</span>
-              </button>
+            {isAuthenticated && currentUser && (
+              <span className={`px-2 py-1 text-xs rounded-full font-medium ${getBadgeColor(currentUser.role)}`}>
+                {getUserRoleBadge(currentUser.role)}
+              </span>
             )}
           </div>
+          
+          {/* Header Actions - only show if authenticated */}
+          {isAuthenticated && (
+            <div className="flex items-center space-x-3">
+              {/* Notifications */}
+              <button
+                onClick={handleNotificationClick}
+                className={`relative p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors ${
+                  location.pathname === '/notifications' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : ''
+                }`}
+                title="Notifications"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center text-white font-medium">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Settings */}
+              <button
+                onClick={handleSettingsClick}
+                className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors ${
+                  location.pathname === '/settings' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : ''
+                }`}
+                title="Settings"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+              
+              {/* Dark Mode Toggle */}
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
+                title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+              
+              {/* User Profile Dropdown */}
+              <div className="relative group">
+                <button 
+                  onClick={handleProfileClick}
+                  className={`flex items-center space-x-2 p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
+                  title="User profile"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                    {getUserInitials(currentUser?.name)}
+                  </div>
+                  <div className="hidden md:block text-left">
+                    <span className="block font-medium text-sm">
+                      {currentUser?.name || 'User'}
+                    </span>
+                    <span className={`block text-xs capitalize ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {currentUser?.role || 'member'}
+                    </span>
+                  </div>
+                </button>
+
+                {/* Dropdown Menu */}
+                <div className={`absolute right-0 top-full mt-2 w-48 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50`}>
+                  <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                    <p className="font-medium text-sm">{currentUser?.name || 'User'}</p>
+                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {currentUser?.email || 'user@example.com'}
+                    </p>
+                  </div>
+                  <div className="py-2">
+                    <button
+                      onClick={handleProfileClick}
+                      className={`w-full text-left px-3 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors flex items-center space-x-2`}
+                    >
+                      <User className="w-4 h-4" />
+                      <span>Profile & Settings</span>
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className={`w-full text-left px-3 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors flex items-center space-x-2 text-red-600 dark:text-red-400`}
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* New Board Button - only show on relevant pages */}
+              {(location.pathname === '/boards' || location.pathname === '/dashboard') && (
+                <button
+                  onClick={() => setShowNewBoardModal(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">New Board</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Login Button - show if not authenticated */}
+          {!isAuthenticated && (
+            <div className="flex items-center space-x-3">
+              {/* Dark Mode Toggle for unauthenticated users */}
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
+                title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+              
+              <button
+                onClick={() => navigate('/login')}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200"
+              >
+                Sign In
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -140,8 +268,8 @@ const TopBar: React.FC<TopBarProps> = ({
               )}
             </div>
 
-            {/* Search and Controls - only show if requested */}
-            {(showSearch || showViewToggle || showFilters) && (
+            {/* Search and Controls - only show if requested and authenticated */}
+            {isAuthenticated && (showSearch || showViewToggle || showFilters) && (
               <div className="flex flex-col sm:flex-row gap-4">
                 {/* Search Input */}
                 {showSearch && (
