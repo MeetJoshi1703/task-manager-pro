@@ -1,3 +1,31 @@
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuthResponse {
+  message: string;
+  user: AuthUser;
+  access_token: string;
+  refresh_token: string;
+}
+
+
+
 export interface Board {
   id: string;
   title: string;
@@ -14,6 +42,13 @@ export interface Board {
   columns: Column[];
 }
 
+export interface CreateBoardData {
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  color: string;
+}
+
 export interface Column {
   id: string;
   title: string;
@@ -21,10 +56,30 @@ export interface Column {
   order: number;
   color: string;
   tasks: Task[];
+  // Backend fields for API responses
+  board_id?: string;
+  position?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
-// Task-related interfaces and types
-// Add these to your types/types.ts file or create a separate tasks.ts file
+export interface CreateColumnData {
+  title: string;
+  color: string;
+}
+
+export interface CreateColumnRequestData {
+  board_id: string;
+  title: string;
+  color?: string;
+}
+
+export interface ReorderColumnData {
+  board_id: string;
+  columns: { id: string; position: number }[];
+}
+
+
 
 export interface Task {
   id: string;
@@ -41,6 +96,15 @@ export interface Task {
   position: number;
   task_assignees?: TaskAssignee[];
   task_tags?: TaskTag[];
+  // Frontend compatibility fields
+  createdBy?: string;
+  assignedTo?: string[];
+  dueDate?: string;
+  tags?: string[];
+  columnId?: string;
+  order?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface TaskAssignee {
@@ -63,19 +127,30 @@ export interface TaskTag {
   created_at: string;
 }
 
-// Create Task Data (for API calls)
+// Task Creation (Frontend form)
 export interface CreateTaskData {
   title: string;
-  description?: string;
+  description: string;
   priority: 'low' | 'medium' | 'high' | 'critical';
-  due_date?: string;
-  column_id: string;
-  board_id: string;
-  assignee_ids?: string[];
-  tags?: string[];
+  dueDate: string;
+  assignedTo: string[];
+  tags: string[];
 }
 
-// Update Task Data
+// Task Creation (API request)
+export interface CreateTaskRequestData {
+  column_id: string;
+  title: string;
+  description?: string;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  due_date?: string;
+  board_id?: string;
+  assignees?: string[];
+  tags?: string[];
+  assignee_ids?: string[];
+}
+
+// Task Update
 export interface UpdateTaskData {
   title?: string;
   description?: string;
@@ -85,7 +160,7 @@ export interface UpdateTaskData {
   position?: number;
 }
 
-// Move Task Data
+// Task Movement
 export interface MoveTaskData {
   task_id: string;
   target_column_id: string;
@@ -93,7 +168,7 @@ export interface MoveTaskData {
   new_position: number;
 }
 
-// Task Service Response Types
+// Task API Responses
 export interface TaskResponse {
   task: Task;
   message?: string;
@@ -104,7 +179,7 @@ export interface TasksResponse {
   message?: string;
 }
 
-// Task Filter Options
+// Task Filters
 export interface TaskFilters {
   status?: string[];
   priority?: string[];
@@ -144,7 +219,7 @@ export interface TaskActivity {
   };
 }
 
-// Task Comment
+// Task Comments
 export interface TaskComment {
   id: string;
   task_id: string;
@@ -160,7 +235,7 @@ export interface TaskComment {
   };
 }
 
-// Task Attachment
+// Task Attachments
 export interface TaskAttachment {
   id: string;
   task_id: string;
@@ -172,7 +247,7 @@ export interface TaskAttachment {
   uploaded_at: string;
 }
 
-// Extended Task interface with additional features
+// Extended Task with additional features
 export interface ExtendedTask extends Task {
   comments?: TaskComment[];
   attachments?: TaskAttachment[];
@@ -181,7 +256,7 @@ export interface ExtendedTask extends Task {
   estimated_time?: number; // in minutes
 }
 
-// Task Form Data (for UI forms)
+// Task Form Data (UI forms)
 export interface TaskFormData {
   title: string;
   description: string;
@@ -192,7 +267,7 @@ export interface TaskFormData {
   estimatedTime?: number;
 }
 
-
+// Task Quick Actions
 export interface TaskQuickAction {
   id: string;
   label: string;
@@ -201,7 +276,7 @@ export interface TaskQuickAction {
   condition?: (task: Task) => boolean;
 }
 
-
+// Task Templates
 export interface TaskTemplate {
   id: string;
   name: string;
@@ -213,7 +288,7 @@ export interface TaskTemplate {
   checklist?: string[];
 }
 
-
+// Bulk Operations
 export interface BulkTaskOperation {
   task_ids: string[];
   operation: 'delete' | 'move' | 'assign' | 'update_status' | 'update_priority';
@@ -225,30 +300,141 @@ export interface BulkTaskOperation {
   };
 }
 
-export interface User {
+// Task Service Data Types
+export interface AddAssigneeData {
+  user_id: string;
+}
+
+export interface AddTagData {
+  tag: string;
+}
+
+export interface AddCommentData {
+  content: string;
+}
+
+export interface AddAttachmentData {
+  file_name: string;
+  file_url: string;
+  file_size: number;
+  file_type: string;
+}
+
+// ============================================================================
+// MEMBER TYPES
+// ============================================================================
+
+export interface Member {
   id: string;
-  name: string;
+  user_id: string;
+  role: 'owner' | 'admin' | 'member' | 'viewer';
+  joined_at: string;
+  profiles: {
+    id: string;
+    full_name: string;
+    email: string;
+    avatar_url?: string;
+  };
+}
+
+export interface AddMemberData {
   email: string;
-  avatar: string;
+  role?: 'admin' | 'member' | 'viewer';
 }
 
-export interface CreateBoardData {
+// ============================================================================
+// NOTIFICATION TYPES
+// ============================================================================
+
+export interface Notification {
+  id: string;
   title: string;
-  description: string;
-  priority: 'low' | 'medium' | 'high';
-  color: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  timestamp: string;
+  read: boolean;
+  actionUrl?: string;
+  avatar?: string;
+  boardId?: string;
 }
 
-export interface CreateTaskData {
+export interface NotificationResponse {
+  id: string;
   title: string;
-  description: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  dueDate: string;
-  assignedTo: string[];
-  tags: string[];
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  timestamp: string;
+  read: boolean;
+  action_url?: string;
+  avatar?: string;
+  board_id?: string;
+  user_id: string;
+  boards?: {
+    id: string;
+    title: string;
+  };
 }
 
-export interface CreateColumnData {
-  title: string;
-  color: string;
+// ============================================================================
+// APP STATE TYPES
+// ============================================================================
+
+export interface AppState {
+  currentView: 'dashboard' | 'boards' | 'board-detail' | 'calendar' | 'team' | 'tasks' | 'notifications' | 'settings';
+  selectedBoard: Board | null;
+  viewMode: 'grid' | 'list';
+  searchTerm: string;
+  filterPriority: string;
+  isDarkMode: boolean;
+}
+
+// ============================================================================
+// UTILITY TYPES
+// ============================================================================
+
+export type Priority = 'low' | 'medium' | 'high' | 'critical';
+export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'blocked';
+export type BoardPriority = 'low' | 'medium' | 'high';
+export type ViewMode = 'grid' | 'list';
+export type CurrentView = 'dashboard' | 'boards' | 'board-detail' | 'calendar' | 'team' | 'tasks' | 'notifications' | 'settings';
+export type MemberRole = 'owner' | 'admin' | 'member' | 'viewer';
+export type NotificationType = 'info' | 'success' | 'warning' | 'error';
+
+// ============================================================================
+// API RESPONSE TYPES
+// ============================================================================
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  message: string;
+  data?: T;
+  error?: string;
+}
+
+export interface PaginatedResponse<T = any> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// ============================================================================
+// ERROR TYPES
+// ============================================================================
+
+export interface ApiError {
+  message: string;
+  statusCode: number;
+  details?: any;
+  errors?: string[];
+}
+
+
+export interface ApiRequestConfig {
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  url: string;
+  data?: any;
+  params?: any;
+  headers?: Record<string, string>;
 }

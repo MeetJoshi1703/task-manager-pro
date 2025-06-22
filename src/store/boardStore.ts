@@ -1,104 +1,122 @@
 import { create } from 'zustand';
-import type { Board, Task, Column, User, CreateBoardData } from '../types/types';
+import type { 
+  Board, 
+  Task, 
+  Column, 
+  User, 
+  AuthUser,
+  CreateBoardData,
+  CreateColumnData,
+  CreateTaskRequestData,
+  CreateColumnRequestData,
+  UpdateTaskData,
+  MoveTaskData,
+  AddAssigneeData,
+  AddTagData,
+  AddMemberData,
+  Member,
+  Notification,
+  NotificationResponse,
+  CurrentView,
+  ViewMode,
+  Priority,
+  ApiError
+} from '../types/types';
+
+// Service imports (only importing services, not types)
 import { authService } from '../services/authService';
 import { boardService } from '../services/boardService';
-import { memberService, type Member, type AddMemberData } from '../services/memberService';
-import { columnService, type CreateColumnData as CreateColumnServiceData } from '../services/columnService';
-import { taskService, type CreateTaskData as CreateTaskServiceData, type UpdateTaskData, type MoveTaskData } from '../services/taskService';
-import { notificationService, type NotificationResponse } from '../services/notificationService';
-
-// ================================
-// INTERFACES & TYPES
-// ================================
-
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  timestamp: string;
-  read: boolean;
-  actionUrl?: string;
-  avatar?: string;
-  boardId?: string;
-  boardTitle?: string; 
-}
+import { memberService } from '../services/memberService';
+import { columnService } from '../services/columnService';
+import { taskService } from '../services/taskService';
+import { notificationService } from '../services/notificationService';
 
 
-export interface AuthUser {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  role: 'admin' | 'member' | 'viewer';
-  joinedAt: string;
-}
 
 interface BoardStore {
-  
+
   isAuthenticated: boolean;
   currentUser: AuthUser | null;
   showAuthModal: boolean;
   authMode: 'login' | 'signup';
+
+
   boards: Board[];
   selectedBoard: Board | null;
-  currentView: 'dashboard' | 'boards' | 'board-detail' | 'calendar' | 'team' | 'tasks' | 'notifications' | 'settings';
-  viewMode: 'grid' | 'list';
+  currentView: CurrentView;
+  viewMode: ViewMode;
   searchTerm: string;
   filterPriority: string;
   isDarkMode: boolean;
   users: User[];
   notifications: Notification[];
+
   loading: boolean;
   error: string | null;
-  boardMembers: Member[];
-  boardColumns: Column[];
-  notificationsLoading: boolean;
-  boardTasks: Record<string, Task[]>;
+  boardsLoading: boolean;
   membersLoading: boolean;
   columnsLoading: boolean;
   tasksLoading: boolean;
+  notificationsLoading: boolean;
+
+
+  boardMembers: Member[];
+  boardColumns: Column[];
+  boardTasks: Record<string, Task[]>; // columnId -> tasks
+
   showNewBoardModal: boolean;
   showNewTaskModal: boolean;
   showNewColumnModal: boolean;
   showAddMemberModal: boolean;
   selectedColumn: string;
+
   setShowAuthModal: (show: boolean) => void;
   setAuthMode: (mode: 'login' | 'signup') => void;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  loginAsDemo: () => void;
+  loginAsDemo: () => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   checkAuthStatus: () => Promise<void>;
-  setCurrentView: (view: BoardStore['currentView']) => void;
+
+  setCurrentView: (view: CurrentView) => void;
   setSelectedBoard: (board: Board | null) => void;
-  setViewMode: (mode: 'grid' | 'list') => void;
+  setViewMode: (mode: ViewMode) => void;
   setSearchTerm: (term: string) => void;
   setFilterPriority: (priority: string) => void;
   setIsDarkMode: (isDark: boolean) => void;
   clearError: () => void;
+
+
   setShowNewBoardModal: (show: boolean) => void;
   setShowNewTaskModal: (show: boolean) => void;
   setShowNewColumnModal: (show: boolean) => void;
   setShowAddMemberModal: (show: boolean) => void;
   setSelectedColumn: (columnId: string) => void;
+
+
   fetchBoards: () => Promise<void>;
   createBoard: (boardData: CreateBoardData) => Promise<void>;
   updateBoard: (boardId: string, updates: Partial<Board>) => Promise<void>;
   deleteBoard: (boardId: string) => Promise<void>;
   starBoard: (boardId: string) => Promise<void>;
+
+
   fetchMembers: (boardId: string) => Promise<void>;
   addMember: (boardId: string, memberData: AddMemberData) => Promise<void>;
   updateMemberRole: (boardId: string, userId: string, role: 'admin' | 'member' | 'viewer') => Promise<void>;
   removeMember: (boardId: string, userId: string) => Promise<void>;
+
+
   fetchColumns: (boardId: string) => Promise<void>;
   createColumn: (boardId: string, columnData: CreateColumnData) => Promise<void>;
   updateColumn: (columnId: string, updates: { title?: string; color?: string }) => Promise<void>;
   deleteColumn: (columnId: string) => Promise<void>;
   reorderColumns: (boardId: string, columns: { id: string; position: number }[]) => Promise<void>;
+
+
   fetchTasks: (columnId: string) => Promise<void>;
   fetchAllTasks: () => Promise<void>;
-  createTask: (columnId: string, taskData: CreateTaskServiceData) => Promise<void>;
+  createTask: (columnId: string, taskData: CreateTaskRequestData) => Promise<void>;
   updateTask: (taskId: string, updates: UpdateTaskData) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   moveTask: (moveData: MoveTaskData) => Promise<void>;
@@ -106,6 +124,15 @@ interface BoardStore {
   removeAssignee: (taskId: string, userId: string) => Promise<void>;
   addTag: (taskId: string, tag: string) => Promise<void>;
   removeTag: (taskId: string, tag: string) => Promise<void>;
+
+
+  fetchNotifications: () => Promise<void>;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
+  deleteNotification: (notificationId: string) => Promise<void>;
+  getUnreadNotificationCount: () => number;
+
+
   getFilteredBoards: () => Board[];
   getTaskById: (taskId: string) => { task: Task; columnId: string } | null;
   getTasksByStatus: (status: string) => Task[];
@@ -113,34 +140,8 @@ interface BoardStore {
   getTasksByAssignee: (userId: string) => Task[];
   searchTasks: (searchTerm: string) => Task[];
   refreshBoardTasks: (boardId: string) => Promise<void>;
-  fetchNotifications: () => Promise<void>;
-  markNotificationAsRead: (notificationId: string) => Promise<void>;
-  markAllNotificationsAsRead: () => Promise<void>;
-  deleteNotification: (notificationId: string) => Promise<void>;
-  getUnreadNotificationCount: () => number;
-
 }
 
-// ================================
-// INITIAL DATA & HELPERS
-// ================================
-
-const initialUsers: User[] = [
-  { id: '1', name: 'John Doe', email: 'john@company.com', avatar: '👨‍💼' },
-  { id: '2', name: 'Sarah Johnson', email: 'sarah@company.com', avatar: '👩‍💼' },
-  { id: '3', name: 'Mike Chen', email: 'mike@company.com', avatar: '👨‍💻' },
-  { id: '4', name: 'Emma Davis', email: 'emma@company.com', avatar: '👩‍🎨' },
-  { id: '5', name: 'Alex Wilson', email: 'alex@company.com', avatar: '👨‍🔬' },
-];
-
-const demoUser: AuthUser = {
-  id: '1',
-  name: 'John Doe',
-  email: 'john@company.com',
-  avatar: '👨‍💼',
-  role: 'admin',
-  joinedAt: '2024-01-15',
-};
 
 const isTokenValid = (): boolean => {
   const token = localStorage.getItem('authToken');
@@ -153,24 +154,54 @@ const isTokenValid = (): boolean => {
   }
 };
 
-const handleApiError = (error: any, logout: () => void, set: any) => {
-  if (error.message?.includes('401') || error.message?.includes('unauthorized')) {
+const handleApiError = (error: ApiError, logout: () => void, set: any) => {
+  console.error('[API Error]', error);
+  
+  if (error.statusCode === 401 || error.message?.includes('unauthorized')) {
     logout();
     return;
   }
-  const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
-  set({ error: errorMessage, loading: false, tasksLoading: false });
-  console.error('[API Error]', error);
+
+  const errorMessage = error.message || 'An unexpected error occurred';
+  set({ 
+    error: errorMessage, 
+    loading: false, 
+    boardsLoading: false,
+    membersLoading: false,
+    columnsLoading: false,
+    tasksLoading: false,
+    notificationsLoading: false
+  });
 };
 
-// ================================
-// ZUSTAND STORE IMPLEMENTATION
-// ================================
+const transformApiTaskToTask = (apiTask: any): Task => ({
+  id: apiTask.id,
+  title: apiTask.title,
+  description: apiTask.description || '',
+  status: apiTask.status,
+  priority: apiTask.priority,
+  position: apiTask.position,
+  due_date: apiTask.due_date,
+  created_by: apiTask.created_by,
+  column_id: apiTask.column_id,
+  board_id: apiTask.board_id,
+  created_at: apiTask.created_at,
+  updated_at: apiTask.updated_at,
+  task_assignees: apiTask.task_assignees || [],
+  task_tags: apiTask.task_tags || [],
+  // Frontend compatibility fields
+  createdBy: apiTask.created_by,
+  assignedTo: apiTask.task_assignees?.map((a: any) => a.user_id) || [],
+  dueDate: apiTask.due_date,
+  tags: apiTask.task_tags?.map((t: any) => t.tag) || [],
+  columnId: apiTask.column_id,
+  order: apiTask.position,
+  createdAt: apiTask.created_at,
+  updatedAt: apiTask.updated_at,
+});
+
 
 export const useBoardStore = create<BoardStore>((set, get) => ({
-  // ================================
-  // INITIAL STATE
-  // ================================
   isAuthenticated: isTokenValid(),
   currentUser: null,
   showAuthModal: false,
@@ -182,17 +213,18 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   searchTerm: '',
   filterPriority: 'all',
   isDarkMode: true,
-  users: initialUsers,
+  users: [],
   notifications: [],
   loading: false,
   error: null,
-  boardMembers: [],
-  boardColumns: [],
-  boardTasks: {},
+  boardsLoading: false,
   membersLoading: false,
   columnsLoading: false,
   tasksLoading: false,
   notificationsLoading: false,
+  boardMembers: [],
+  boardColumns: [],
+  boardTasks: {},
   showNewBoardModal: false,
   showNewTaskModal: false,
   showNewColumnModal: false,
@@ -202,36 +234,34 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   // ================================
   // AUTHENTICATION ACTIONS
   // ================================
-
   setShowAuthModal: (show) => set({ showAuthModal: show }),
   setAuthMode: (mode) => set({ authMode: mode }),
 
-  // Update your checkAuthStatus function to include notifications
   checkAuthStatus: async () => {
     if (!isTokenValid()) {
       get().logout();
       return;
     }
+    
     set({ loading: true, error: null });
     try {
       const user = await authService.getCurrentUser();
       set({ isAuthenticated: true, currentUser: user });
       
-      // Fetch initial data
+      // Fetch initial data in parallel
       await Promise.all([
         get().fetchBoards(),
         get().fetchAllTasks(),
-        get().fetchNotifications(), // Add this line
+        get().fetchNotifications(),
       ]);
       
       set({ loading: false });
-      console.log('[checkAuthStatus] Initialized app with user data');
+      console.log('[Auth] Successfully initialized app with user data');
     } catch (error: any) {
-      console.error('[checkAuthStatus] Error during auth check:', error);
+      console.error('[Auth] Error during auth check:', error);
       handleApiError(error, get().logout, set);
     }
   },
-
 
   login: async (email, password) => {
     set({ loading: true, error: null });
@@ -239,11 +269,13 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       const response = await authService.login(email, password);
       localStorage.setItem('authToken', response.access_token);
       localStorage.setItem('refreshToken', response.refresh_token);
+      
       set({
         isAuthenticated: true,
         currentUser: response.user,
         showAuthModal: false,
       });
+      
       await get().checkAuthStatus();
       return { success: true };
     } catch (error: any) {
@@ -258,6 +290,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       const response = await authService.signup(name, email, password);
       localStorage.setItem('authToken', response.access_token);
       localStorage.setItem('refreshToken', response.refresh_token);
+      
       set({
         isAuthenticated: true,
         currentUser: response.user,
@@ -265,43 +298,43 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         boards: [],
         notifications: [],
       });
+      
       return { success: true };
     } catch (error: any) {
-      const errorMessage =
-        error.statusCode === 409
-          ? 'Email already exists'
-          : error.statusCode === 400
-            ? error.errors?.password || 'Invalid input data'
-            : 'Failed to create account';
+      const errorMessage = error.statusCode === 409 
+        ? 'Email already exists'
+        : error.statusCode === 400
+          ? error.errors?.password || 'Invalid input data'
+          : 'Failed to create account';
+      
       set({ error: errorMessage, loading: false });
       return { success: false, error: errorMessage };
     }
   },
 
-loginAsDemo: async () => {
-  set({ loading: true, error: null });
-  try {
-    const email = import.meta.env.VITE_DEMO_EMAIL;
-    const password = import.meta.env.VITE_DEMO_PASSWORD;
+  loginAsDemo: async () => {
+    set({ loading: true, error: null });
+    try {
+      const email = import.meta.env.VITE_DEMO_EMAIL;
+      const password = import.meta.env.VITE_DEMO_PASSWORD;
 
-    const response = await authService.login(email, password);
-    localStorage.setItem('authToken', response.access_token);
-    localStorage.setItem('refreshToken', response.refresh_token);
+      const response = await authService.login(email, password);
+      localStorage.setItem('authToken', response.access_token);
+      localStorage.setItem('refreshToken', response.refresh_token);
 
-    set({
-      isAuthenticated: true,
-      currentUser: response.user,
-      showAuthModal: false,
-    });
+      set({
+        isAuthenticated: true,
+        currentUser: response.user,
+        showAuthModal: false,
+      });
 
-    await get().checkAuthStatus();
-    return { success: true };
-  } catch (error: any) {
-    handleApiError(error, get().logout, set);
-    return { success: false, error: error.message || 'Demo login failed' };
-  }
-},
-
+      await get().checkAuthStatus();
+      return { success: true };
+    } catch (error: any) {
+      handleApiError(error, get().logout, set);
+      return { success: false, error: error.message || 'Demo login failed' };
+    }
+  },
 
   logout: () => {
     localStorage.removeItem('authToken');
@@ -311,7 +344,7 @@ loginAsDemo: async () => {
       currentUser: null,
       boards: [],
       users: [],
-      notifications: [], // Clear notifications
+      notifications: [],
       selectedBoard: null,
       currentView: 'dashboard',
       boardMembers: [],
@@ -319,15 +352,17 @@ loginAsDemo: async () => {
       boardTasks: {},
       error: null,
       loading: false,
+      boardsLoading: false,
+      membersLoading: false,
+      columnsLoading: false,
       tasksLoading: false,
-      notificationsLoading: false, // Reset loading state
+      notificationsLoading: false,
     });
   },
 
   // ================================
   // CORE APPLICATION ACTIONS
   // ================================
-
   setCurrentView: (view) => set({ currentView: view }),
   setSelectedBoard: (board) => set({ selectedBoard: board }),
   setViewMode: (mode) => set({ viewMode: mode }),
@@ -339,62 +374,58 @@ loginAsDemo: async () => {
   // ================================
   // MODAL ACTIONS
   // ================================
-
   setShowNewBoardModal: (show) => set({ showNewBoardModal: show }),
   setShowNewTaskModal: (show) => set({ showNewTaskModal: show }),
   setShowNewColumnModal: (show) => set({ showNewColumnModal: show }),
   setShowAddMemberModal: (show) => set({ showAddMemberModal: show }),
   setSelectedColumn: (columnId) => set({ selectedColumn: columnId }),
 
-
-
   // ================================
   // BOARD CRUD OPERATIONS
   // ================================
-
   fetchBoards: async () => {
-    set({ loading: true, error: null });
+    set({ boardsLoading: true, error: null });
     try {
       const boards = await boardService.getBoards();
-      set({ boards, loading: false });
-      console.log(`[fetchBoards] Fetched ${boards.length} boards`);
+      set({ boards, boardsLoading: false });
+      console.log(`[Boards] Fetched ${boards.length} boards`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
   },
 
   createBoard: async (boardData) => {
-    set({ loading: true, error: null });
+    set({ boardsLoading: true, error: null });
     try {
       const newBoard = await boardService.createBoard(boardData);
       set((state) => ({
         boards: [...state.boards, newBoard],
         showNewBoardModal: false,
-        loading: false,
+        boardsLoading: false,
       }));
-      console.log(`[createBoard] Created board: ${newBoard.id}`);
+      console.log(`[Boards] Created board: ${newBoard.id}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
   },
 
   updateBoard: async (boardId, updates) => {
-    set({ loading: true, error: null });
+    set({ boardsLoading: true, error: null });
     try {
       const updatedBoard = await boardService.updateBoard(boardId, updates);
       set((state) => ({
         boards: state.boards.map((b) => (b.id === boardId ? updatedBoard : b)),
         selectedBoard: state.selectedBoard?.id === boardId ? updatedBoard : state.selectedBoard,
-        loading: false,
+        boardsLoading: false,
       }));
-      console.log(`[updateBoard] Updated board: ${boardId}`);
+      console.log(`[Boards] Updated board: ${boardId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
   },
 
   deleteBoard: async (boardId) => {
-    set({ loading: true, error: null });
+    set({ boardsLoading: true, error: null });
     try {
       await boardService.deleteBoard(boardId);
       set((state) => ({
@@ -406,39 +437,38 @@ loginAsDemo: async () => {
             !state.boardColumns.find((c) => c.id === colId && c.board_id === boardId)
           )
         ),
-        loading: false,
+        boardsLoading: false,
       }));
-      console.log(`[deleteBoard] Deleted board: ${boardId}`);
+      console.log(`[Boards] Deleted board: ${boardId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
   },
 
   starBoard: async (boardId) => {
-    set({ loading: true, error: null });
+    set({ boardsLoading: true, error: null });
     try {
       const updatedBoard = await boardService.starBoard(boardId);
       set((state) => ({
         boards: state.boards.map((b) => (b.id === boardId ? updatedBoard : b)),
         selectedBoard: state.selectedBoard?.id === boardId ? updatedBoard : state.selectedBoard,
-        loading: false,
+        boardsLoading: false,
       }));
-      console.log(`[starBoard] Starred board: ${boardId}`);
+      console.log(`[Boards] Starred board: ${boardId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
   },
 
   // ================================
-  // MEMBER CRUD OPERATIONS
+  // MEMBER OPERATIONS
   // ================================
-
   fetchMembers: async (boardId) => {
     set({ membersLoading: true, error: null });
     try {
       const members = await memberService.getMembers(boardId);
       set({ boardMembers: members, membersLoading: false });
-      console.log(`[fetchMembers] Fetched ${members.length} members for board: ${boardId}`);
+      console.log(`[Members] Fetched ${members.length} members for board: ${boardId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -453,7 +483,7 @@ loginAsDemo: async () => {
         showAddMemberModal: false,
         membersLoading: false,
       }));
-      console.log(`[addMember] Added member to board: ${boardId}`);
+      console.log(`[Members] Added member to board: ${boardId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -469,7 +499,7 @@ loginAsDemo: async () => {
         ),
         membersLoading: false,
       }));
-      console.log(`[updateMemberRole] Updated role for user: ${userId} in board: ${boardId}`);
+      console.log(`[Members] Updated role for user: ${userId} in board: ${boardId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -483,16 +513,15 @@ loginAsDemo: async () => {
         boardMembers: state.boardMembers.filter((m) => m.user_id !== userId),
         membersLoading: false,
       }));
-      console.log(`[removeMember] Removed user: ${userId} from board: ${boardId}`);
+      console.log(`[Members] Removed user: ${userId} from board: ${boardId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
   },
 
   // ================================
-  // COLUMN CRUD OPERATIONS
+  // COLUMN OPERATIONS
   // ================================
-
   fetchColumns: async (boardId) => {
     set({ columnsLoading: true, error: null });
     try {
@@ -504,7 +533,7 @@ loginAsDemo: async () => {
         ],
         columnsLoading: false,
       }));
-      console.log(`[fetchColumns] Fetched ${columns.length} columns for board: ${boardId}`);
+      console.log(`[Columns] Fetched ${columns.length} columns for board: ${boardId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -524,7 +553,7 @@ loginAsDemo: async () => {
         showNewColumnModal: false,
         columnsLoading: false,
       }));
-      console.log(`[createColumn] Created column: ${newColumn.id} in board: ${boardId}`);
+      console.log(`[Columns] Created column: ${newColumn.id} in board: ${boardId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -540,7 +569,7 @@ loginAsDemo: async () => {
         ),
         columnsLoading: false,
       }));
-      console.log(`[updateColumn] Updated column: ${columnId}`);
+      console.log(`[Columns] Updated column: ${columnId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -557,7 +586,7 @@ loginAsDemo: async () => {
         ),
         columnsLoading: false,
       }));
-      console.log(`[deleteColumn] Deleted column: ${columnId}`);
+      console.log(`[Columns] Deleted column: ${columnId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -574,22 +603,19 @@ loginAsDemo: async () => {
         })),
         columnsLoading: false,
       }));
-      console.log(`[reorderColumns] Reordered columns for board: ${boardId}`);
+      console.log(`[Columns] Reordered columns for board: ${boardId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
   },
 
   // ================================
-  // TASK CRUD OPERATIONS
+  // TASK OPERATIONS
   // ================================
-
   fetchTasks: async (columnId) => {
-    console.log(`[fetchTasks] Fetching tasks for columnId: ${columnId}`);
     set({ tasksLoading: true, error: null });
     try {
       const tasks = await taskService.getTasksByColumn(columnId);
-      console.log(`[fetchTasks] Successfully fetched ${tasks?.length || 0} tasks for columnId: ${columnId}`);
       set((state) => ({
         boardTasks: {
           ...state.boardTasks,
@@ -597,65 +623,40 @@ loginAsDemo: async () => {
         },
         tasksLoading: false,
       }));
+      console.log(`[Tasks] Fetched ${tasks?.length || 0} tasks for column: ${columnId}`);
     } catch (error: any) {
-      console.error(`[fetchTasks] Error fetching tasks for columnId: ${columnId}`, {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
       handleApiError(error, get().logout, set);
     }
   },
-fetchAllTasks: async () => {
-  console.log('[fetchAllTasks] Fetching all tasks for current user');
-  set({ tasksLoading: true, error: null });
-  try {
-    const response = await taskService.getAllTasks();
-    const tasks = response.tasks; // Extract tasks array from response
-    
-    const tasksByColumn = tasks.reduce((acc: Record<string, Task[]>, task: any) => {
-      // Transform API response to match your Task interface
-      const transformedTask: Task = {
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        priority: task.priority,
-        status: task.status,
-        position: task.position,
-        due_date: task.due_date,
-        created_by: task.created_by,
-        columnId: task.column_id, // Map column_id to columnId
-        created_at: task.created_at,
-        updated_at: task.updated_at,
-        board_id: task.board_id,
-        assignees: task.task_assignees.map((assignee: any) => assignee.user_id),
-        tags: task.task_tags.map((tag: any) => tag.tag),
-      };
+
+  fetchAllTasks: async () => {
+    set({ tasksLoading: true, error: null });
+    try {
+      const response = await taskService.getAllTasks();
+      const tasks = response.tasks || [];
       
-      const columnId = task.column_id;
-      acc[columnId] = acc[columnId] || [];
-      acc[columnId].push(transformedTask);
-      return acc;
-    }, {});
-    
-    set((state) => ({
-      boardTasks: {
-        ...state.boardTasks,
-        ...tasksByColumn,
-      },
-      tasksLoading: false,
-    }));
-    
-    console.log(`[fetchAllTasks] Successfully fetched ${tasks.length} tasks across ${Object.keys(tasksByColumn).length} columns`);
-  } catch (error: any) {
-    console.error('[fetchAllTasks] Error fetching all tasks:', {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-    });
-    handleApiError(error, get().logout, set);
-  }
-},
+      const tasksByColumn = tasks.reduce((acc: Record<string, Task[]>, apiTask: any) => {
+        const transformedTask = transformApiTaskToTask(apiTask);
+        const columnId = apiTask.column_id;
+        acc[columnId] = acc[columnId] || [];
+        acc[columnId].push(transformedTask);
+        return acc;
+      }, {});
+      
+      set((state) => ({
+        boardTasks: {
+          ...state.boardTasks,
+          ...tasksByColumn,
+        },
+        tasksLoading: false,
+      }));
+      
+      console.log(`[Tasks] Fetched ${tasks.length} tasks across ${Object.keys(tasksByColumn).length} columns`);
+    } catch (error: any) {
+      handleApiError(error, get().logout, set);
+    }
+  },
+
   createTask: async (columnId, taskData) => {
     set({ tasksLoading: true, error: null });
     try {
@@ -665,15 +666,17 @@ fetchAllTasks: async () => {
         board_id: get().selectedBoard?.id || taskData.board_id,
       };
       const newTask = await taskService.createTask(taskPayload);
+      const transformedTask = transformApiTaskToTask(newTask);
+      
       set((state) => ({
         boardTasks: {
           ...state.boardTasks,
-          [columnId]: [...(state.boardTasks[columnId] || []), newTask],
+          [columnId]: [...(state.boardTasks[columnId] || []), transformedTask],
         },
         showNewTaskModal: false,
         tasksLoading: false,
       }));
-      console.log(`[createTask] Created task: ${newTask.id} in column: ${columnId}`);
+      console.log(`[Tasks] Created task: ${newTask.id} in column: ${columnId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -692,7 +695,7 @@ fetchAllTasks: async () => {
         });
         return { boardTasks: newBoardTasks, tasksLoading: false };
       });
-      console.log(`[updateTask] Updated task: ${taskId}`);
+      console.log(`[Tasks] Updated task: ${taskId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -709,7 +712,7 @@ fetchAllTasks: async () => {
         });
         return { boardTasks: newBoardTasks, tasksLoading: false };
       });
-      console.log(`[deleteTask] Deleted task: ${taskId}`);
+      console.log(`[Tasks] Deleted task: ${taskId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -719,6 +722,8 @@ fetchAllTasks: async () => {
     set({ tasksLoading: true, error: null });
     try {
       const updatedTask = await taskService.moveTask(moveData);
+      const transformedTask = transformApiTaskToTask(updatedTask);
+      
       set((state) => {
         const newBoardTasks = { ...state.boardTasks };
         const sourceColumnId = moveData.source_column_id;
@@ -733,13 +738,13 @@ fetchAllTasks: async () => {
         if (targetColumnId && newBoardTasks[targetColumnId]) {
           newBoardTasks[targetColumnId] = [
             ...(newBoardTasks[targetColumnId] || []),
-            { ...updatedTask, column_id: targetColumnId, position: moveData.new_position },
+            { ...transformedTask, column_id: targetColumnId, position: moveData.new_position },
           ].sort((a, b) => a.position - b.position);
         }
 
         return { boardTasks: newBoardTasks, tasksLoading: false };
       });
-      console.log(`[moveTask] Moved task: ${moveData.task_id} to column: ${moveData.target_column_id}`);
+      console.log(`[Tasks] Moved task: ${moveData.task_id} to column: ${moveData.target_column_id}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -758,7 +763,7 @@ fetchAllTasks: async () => {
         });
         return { boardTasks: newBoardTasks, tasksLoading: false };
       });
-      console.log(`[addAssignee] Added assignee: ${userId} to task: ${taskId}`);
+      console.log(`[Tasks] Added assignee: ${userId} to task: ${taskId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -777,7 +782,7 @@ fetchAllTasks: async () => {
         });
         return { boardTasks: newBoardTasks, tasksLoading: false };
       });
-      console.log(`[removeAssignee] Removed assignee: ${userId} from task: ${taskId}`);
+      console.log(`[Tasks] Removed assignee: ${userId} from task: ${taskId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -796,7 +801,7 @@ fetchAllTasks: async () => {
         });
         return { boardTasks: newBoardTasks, tasksLoading: false };
       });
-      console.log(`[addTag] Added tag: ${tag} to task: ${taskId}`);
+      console.log(`[Tasks] Added tag: ${tag} to task: ${taskId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
@@ -815,47 +820,47 @@ fetchAllTasks: async () => {
         });
         return { boardTasks: newBoardTasks, tasksLoading: false };
       });
-      console.log(`[removeTag] Removed tag: ${tag} from task: ${taskId}`);
+      console.log(`[Tasks] Removed tag: ${tag} from task: ${taskId}`);
     } catch (error: any) {
       handleApiError(error, get().logout, set);
     }
   },
-  // ================================
-  // NOTIFICATION ACTIONS
-  // ================================
-// In your boardStore.ts, wrap fetchNotifications with useCallback equivalent
-fetchNotifications: async () => {
-  const state = get();
-  if (state.notificationsLoading) return; // Prevent multiple simultaneous calls
-  
-  set({ notificationsLoading: true, error: null });
-  try {
-    const apiNotifications = await notificationService.getNotifications();
-    
-    // Transform API response to match store interface
-    const notifications: Notification[] = apiNotifications.map((notif) => ({
-      id: notif.id,
-      title: notif.title,
-      message: notif.message,
-      type: notif.type,
-      timestamp: notif.timestamp,
-      read: notif.read,
-      actionUrl: notif.action_url,
-      avatar: notif.avatar,
-      boardId: notif.board_id,
-      boardTitle: notif.boards?.title,
-    }));
 
-    set({ notifications, notificationsLoading: false });
-    console.log(`[fetchNotifications] Fetched ${notifications.length} notifications`);
-  } catch (error: any) {
-    console.error('[fetchNotifications] Error fetching notifications:', error);
-    set({ 
-      error: error.message || 'Failed to fetch notifications', 
-      notificationsLoading: false 
-    });
-  }
-},
+  // ================================
+  // NOTIFICATION OPERATIONS
+  // ================================
+  fetchNotifications: async () => {
+    const state = get();
+    if (state.notificationsLoading) return; // Prevent multiple simultaneous calls
+    
+    set({ notificationsLoading: true, error: null });
+    try {
+      const apiNotifications = await notificationService.getNotifications();
+      
+      // Transform API response to match store interface
+      const notifications: Notification[] = apiNotifications.map((notif) => ({
+        id: notif.id,
+        title: notif.title,
+        message: notif.message,
+        type: notif.type,
+        timestamp: notif.timestamp,
+        read: notif.read,
+        actionUrl: notif.action_url,
+        avatar: notif.avatar,
+        boardId: notif.board_id,
+        boardTitle: notif.boards?.title,
+      }));
+
+      set({ notifications, notificationsLoading: false });
+      console.log(`[Notifications] Fetched ${notifications.length} notifications`);
+    } catch (error: any) {
+      console.error('[Notifications] Error fetching notifications:', error);
+      set({ 
+        error: error.message || 'Failed to fetch notifications', 
+        notificationsLoading: false 
+      });
+    }
+  },
 
   markNotificationAsRead: async (notificationId) => {
     try {
@@ -867,9 +872,9 @@ fetchNotifications: async () => {
         ),
       }));
       
-      console.log(`[markNotificationAsRead] Marked notification ${notificationId} as read`);
+      console.log(`[Notifications] Marked notification ${notificationId} as read`);
     } catch (error: any) {
-      console.error('[markNotificationAsRead] Error marking notification as read:', error);
+      console.error('[Notifications] Error marking notification as read:', error);
       handleApiError(error, get().logout, set);
     }
   },
@@ -882,9 +887,9 @@ fetchNotifications: async () => {
         notifications: state.notifications.map((n) => ({ ...n, read: true })),
       }));
       
-      console.log('[markAllNotificationsAsRead] Marked all notifications as read');
+      console.log('[Notifications] Marked all notifications as read');
     } catch (error: any) {
-      console.error('[markAllNotificationsAsRead] Error marking all notifications as read:', error);
+      console.error('[Notifications] Error marking all notifications as read:', error);
       handleApiError(error, get().logout, set);
     }
   },
@@ -897,20 +902,18 @@ fetchNotifications: async () => {
         notifications: state.notifications.filter((n) => n.id !== notificationId),
       }));
       
-      console.log(`[deleteNotification] Deleted notification ${notificationId}`);
+      console.log(`[Notifications] Deleted notification ${notificationId}`);
     } catch (error: any) {
-      console.error('[deleteNotification] Error deleting notification:', error);
+      console.error('[Notifications] Error deleting notification:', error);
       handleApiError(error, get().logout, set);
     }
   },
 
   getUnreadNotificationCount: () => get().notifications.filter((n) => !n.read).length,
 
-
   // ================================
   // UTILITY FUNCTIONS
   // ================================
-
   getFilteredBoards: () => {
     const { boards, searchTerm, filterPriority } = get();
     return boards.filter((board) => {
@@ -969,12 +972,12 @@ fetchNotifications: async () => {
     try {
       const { boardColumns } = get();
       const relevantColumns = boardColumns.filter((c) => c.board_id === boardId);
-      console.log(`[refreshBoardTasks] Refreshing tasks for boardId: ${boardId}, ${relevantColumns.length} columns`);
+      console.log(`[Tasks] Refreshing tasks for boardId: ${boardId}, ${relevantColumns.length} columns`);
       await Promise.all(relevantColumns.map((c) => get().fetchTasks(c.id)));
-      console.log(`[refreshBoardTasks] Successfully refreshed tasks for boardId: ${boardId}`);
+      console.log(`[Tasks] Successfully refreshed tasks for boardId: ${boardId}`);
       set({ tasksLoading: false });
     } catch (error: any) {
-      console.error('[refreshBoardTasks] Error refreshing tasks:', error);
+      console.error('[Tasks] Error refreshing tasks:', error);
       handleApiError(error, get().logout, set);
     }
   },
