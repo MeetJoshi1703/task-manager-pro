@@ -50,9 +50,15 @@ export class TaskService {
   }
 
   async getTasksByColumn(columnId: string) {
+  try {
     const response = await apiClient.get(`/tasks/${columnId}`);
-    return response;
+    console.log('Tasks for column:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch tasks for column:', error);
+    throw error;
   }
+}
 
   async getAllTasks() {
    

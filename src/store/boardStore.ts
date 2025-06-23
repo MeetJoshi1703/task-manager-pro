@@ -585,27 +585,28 @@ loginAsDemo: async () => {
   // ================================
 
   fetchTasks: async (columnId) => {
-    console.log(`[fetchTasks] Fetching tasks for columnId: ${columnId}`);
-    set({ tasksLoading: true, error: null });
-    try {
-      const tasks = await taskService.getTasksByColumn(columnId);
-      console.log(`[fetchTasks] Successfully fetched ${tasks?.length || 0} tasks for columnId: ${columnId}`);
-      set((state) => ({
-        boardTasks: {
-          ...state.boardTasks,
-          [columnId]: tasks || [],
-        },
-        tasksLoading: false,
-      }));
-    } catch (error: any) {
-      console.error(`[fetchTasks] Error fetching tasks for columnId: ${columnId}`, {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
-      handleApiError(error, get().logout, set);
-    }
-  },
+  console.log(`[fetchTasks] Fetching tasks for columnId: ${columnId}`);
+  set({ tasksLoading: true, error: null });
+  try {
+    const tasks = await taskService.getTasksByColumn(columnId);
+    console.log(`[fetchTasks] Successfully fetched ${tasks?.length || 0} tasks for columnId: ${columnId}`);
+    set((state) => ({
+      boardTasks: {
+        ...state.boardTasks,
+        [columnId]: tasks || [],
+      },
+      tasksLoading: false,
+    }));
+  } catch (error: any) {
+    console.error(`[fetchTasks] Error fetching tasks for columnId: ${columnId}`, {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+    handleApiError(error, get().logout, set);
+  }
+},
+
 fetchAllTasks: async () => {
   console.log('[fetchAllTasks] Fetching all tasks for current user');
   set({ tasksLoading: true, error: null });

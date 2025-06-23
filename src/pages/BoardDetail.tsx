@@ -183,9 +183,10 @@ const BoardDetail: React.FC = () => {
 
   // Calculate stats
   const totalTasks = Object.values(boardTasks).reduce((total, tasks) => total + tasks.length, 0);
-  const completedTasks = Object.values(boardTasks).reduce((total, tasks) => 
-    total + tasks.filter(task => task.status === 'completed').length, 0
-  );
+  const completedTasks = Object.values(boardTasks).reduce((total, tasks) => {
+  if (!Array.isArray(tasks)) return total; // skip invalid entries
+  return total + tasks.filter(task => task.status === 'completed').length;
+}, 0);
 
   // Loading state
   if (isLoadingBoard || loading) {
