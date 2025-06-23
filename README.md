@@ -90,6 +90,9 @@ Implemented using Zustand with modular store architecture:
 ![Screenshot 2025-06-22 231130](https://github.com/user-attachments/assets/cfb18cf3-079b-4cd1-ad7c-a37ae164cfe0)
 *Board management interface showing multiple project boards*
 
+![Screenshot 2025-06-23 120132](https://github.com/user-attachments/assets/8d907872-ed52-4c0d-a5c5-7a7cf6034bd4)
+*Columns and tasks*
+
 ## 🚀 Installation & Setup
 
 ### Prerequisites
@@ -175,6 +178,8 @@ taskflow-frontend/
 ├── tailwind.config.js     # TailwindCSS configuration
 └── vite.config.ts         # Vite build configuration
 ```
+
+
 
 ![Screenshot 2025-06-22 232330](https://github.com/user-attachments/assets/bececacf-be46-4b69-934c-1b935aa87eb1)
 *Team management interface for adding and managing board members*
