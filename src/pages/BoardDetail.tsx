@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useBoardStore } from '../store/boardStore';
 import { 
   ArrowLeft, 
   Star, 
@@ -17,39 +16,64 @@ import {
   Zap,
   AlertCircle,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
+import { useAuth, useBoards, useTasks, useColumns, useMembers, useUI } from '../store/hooks';
 import TaskModal from '../components/TaskModal';
+
 
 const BoardDetail: React.FC = () => {
   const { boardId } = useParams<{ boardId: string }>();
   const navigate = useNavigate();
+  
+  // Use segregated hooks
+  const { isAuthenticated } = useAuth();
   const { 
     selectedBoard, 
     setSelectedBoard, 
     boards, 
-    isDarkMode, 
     starBoard, 
-    loading, 
-    error,
+    loading: boardsLoading, 
+    error: boardsError,
     fetchBoards,
-    fetchColumns,
-    fetchMembers,
-    setShowNewColumnModal,
-    setShowAddMemberModal,
-    boardMembers,
-    boardColumns,
-    columnsLoading,
-    boardTasks,
-    tasksLoading,
-    fetchTasks,
-    setShowNewTaskModal,
-    setSelectedColumn,
-    updateTask,
-    deleteTask
-  } = useBoardStore();
+    hasFetched: boardsHasFetched
+  } = useBoards();
+  
+  const { 
+    boardColumns, 
+    fetchColumns, 
+    loading: columnsLoading, 
+    error: columnsError,
+    hasFetched: columnsHasFetched
+  } = useColumns();
+  
+  const { 
+    boardTasks, 
+    fetchTasks, 
+    updateTask, 
+    deleteTask, 
+    loading: tasksLoading,
+    hasFetched: tasksHasFetched
+  } = useTasks();
+  
+  const { 
+    boardMembers, 
+    fetchMembers, 
+    loading: membersLoading,
+    hasFetched: membersHasFetched
+  } = useMembers();
+  
+  const { 
+    isDarkMode,
+    openNewColumnModal,
+    openAddMemberModal,
+    openNewTaskModal,
+    setSelectedColumn
+  } = useUI();
 
-  const [isLoadingBoard, setIsLoadingBoard] = useState(true);
+  // Local state
+  const [isInitialized, setIsInitialized] = useState(false);
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     title: '',
@@ -58,67 +82,117 @@ const BoardDetail: React.FC = () => {
     due_date: ''
   });
 
-  // Fetch tasks when columns are loaded
+  // Initialize board data - runs only once per boardId
   useEffect(() => {
-    if (boardColumns && boardColumns.length > 0) {
-      boardColumns.forEach(column => {
-        fetchTasks(column.id);
-      });
+    if (!boardId || !isAuthenticated) {
+      navigate('/boards');
+      return;
     }
-  }, [boardColumns, fetchTasks]);
 
-  // Load board data
-  useEffect(() => {
-    const loadBoard = async () => {
-      if (!boardId) {
-        navigate('/boards');
-        return;
-      }
-
-      const existingBoard = boards.find(board => board.id === boardId);
+    const initializeBoard = async () => {
+      setIsInitialized(false);
       
-      if (existingBoard) {
-        setSelectedBoard(existingBoard);
-        setIsLoadingBoard(false);
-        await Promise.all([
-          fetchColumns(boardId),
-          fetchMembers(boardId)
-        ]);
-      } else {
-        if (boards.length === 0) {
+      try {
+        // First, ensure we have boards loaded
+        if (!boardsHasFetched && boards.length === 0) {
           await fetchBoards();
         }
+
+        // Find the board in our current boards array
+        const board = boards.find(b => b.id === boardId);
         
-        const board = boards.find(board => board.id === boardId);
-        if (board) {
-          setSelectedBoard(board);
-          await Promise.all([
-            fetchColumns(boardId),
-            fetchMembers(boardId)
-          ]);
-        } else {
+        if (!board) {
+          console.error(`Board ${boardId} not found`);
           navigate('/boards');
           return;
         }
-        setIsLoadingBoard(false);
+
+        // Set the selected board
+        setSelectedBoard(board);
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Failed to initialize board:', error);
+        navigate('/boards');
       }
     };
 
-    loadBoard();
-  }, [boardId, boards, setSelectedBoard, navigate, fetchBoards, fetchColumns, fetchMembers]);
+    initializeBoard();
+  }, [boardId, isAuthenticated, boardsHasFetched, boards, setSelectedBoard, navigate, fetchBoards]);
 
-  // Event handlers
-  const handleBack = () => navigate('/boards');
-  const handleStarBoard = () => selectedBoard && starBoard(selectedBoard.id);
-  const handleAddColumn = () => setShowNewColumnModal(true);
-  const handleAddMember = () => setShowAddMemberModal(true);
-  const handleAddTask = (columnId: string) => {
-    setSelectedColumn(columnId);
-    setShowNewTaskModal(true);
+  // Fetch board-specific data - runs only when board is selected and we haven't fetched yet
+  // Replace the current useEffect with this
+// Update the useEffect to check the specific board
+useEffect(() => {
+  if (!selectedBoard?.id || !isInitialized) return;
+
+  const loadBoardData = async () => {
+    try {
+      console.log(`[Debug] Loading data for board: ${selectedBoard.id}`);
+      console.log(`[Debug] columnsHasFetched for this board:`, columnsHasFetched[selectedBoard.id]);
+      
+      // Check if columns were fetched for this specific board
+      if (!columnsHasFetched[selectedBoard.id]) {
+        console.log(`[Debug] Fetching columns for board: ${selectedBoard.id}`);
+        await fetchColumns(selectedBoard.id);
+        console.log(`[Debug] Columns after fetch:`, boardColumns);
+      }
+
+      // Similar logic for members
+      if (!membersHasFetched[selectedBoard.id]) {
+        await fetchMembers(selectedBoard.id);
+      }
+    } catch (error) {
+      console.error('Failed to load board data:', error);
+    }
   };
 
+  loadBoardData();
+}, [selectedBoard?.id, isInitialized, columnsHasFetched, membersHasFetched, fetchColumns, fetchMembers, boardColumns]);
+  // Fetch tasks for each column - runs only when columns are loaded and tasks haven't been fetched
+  useEffect(() => {
+    if (!boardColumns || boardColumns.length === 0) return;
+
+    const loadTasks = async () => {
+      const promises = boardColumns
+        .filter(column => column.board_id === selectedBoard?.id)
+        .map(column => {
+          // Only fetch if we haven't fetched tasks for this column yet
+          if (!tasksHasFetched[column.id]) {
+            return fetchTasks(column.id);
+          }
+          return Promise.resolve();
+        });
+
+      try {
+        await Promise.all(promises);
+      } catch (error) {
+        console.error('Failed to load tasks:', error);
+      }
+    };
+
+    loadTasks();
+  }, [boardColumns, selectedBoard?.id, tasksHasFetched, fetchTasks]);
+
+  // Event handlers
+  const handleBack = useCallback(() => navigate('/boards'), [navigate]);
+  
+  const handleStarBoard = useCallback(() => {
+    if (selectedBoard) {
+      starBoard(selectedBoard.id);
+    }
+  }, [selectedBoard, starBoard]);
+  
+  const handleAddColumn = useCallback(() => openNewColumnModal(), [openNewColumnModal]);
+  
+  const handleAddMember = useCallback(() => openAddMemberModal(), [openAddMemberModal]);
+  
+  const handleAddTask = useCallback((columnId: string) => {
+    setSelectedColumn(columnId);
+    openNewTaskModal(columnId);
+  }, [setSelectedColumn, openNewTaskModal]);
+
   // Task editing handlers
-  const handleEditTask = (task: any) => {
+  const handleEditTask = useCallback((task: any) => {
     setEditingTask(task.id);
     setEditForm({
       title: task.title,
@@ -126,9 +200,9 @@ const BoardDetail: React.FC = () => {
       priority: task.priority,
       due_date: task.due_date || ''
     });
-  };
+  }, []);
 
-  const handleSaveTask = async () => {
+  const handleSaveTask = useCallback(async () => {
     if (!editingTask) return;
     
     try {
@@ -138,14 +212,14 @@ const BoardDetail: React.FC = () => {
     } catch (error) {
       console.error('Failed to update task:', error);
     }
-  };
+  }, [editingTask, editForm, updateTask]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingTask(null);
     setEditForm({ title: '', description: '', priority: 'medium', due_date: '' });
-  };
+  }, []);
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTask = useCallback(async (taskId: string) => {
     if (window.confirm('Are you sure you want to delete this task?')) {
       try {
         await deleteTask(taskId);
@@ -153,16 +227,25 @@ const BoardDetail: React.FC = () => {
         console.error('Failed to delete task:', error);
       }
     }
-  };
+  }, [deleteTask]);
+
+  const handleRetry = useCallback(() => {
+    if (selectedBoard?.id) {
+      fetchColumns(selectedBoard.id);
+      fetchMembers(selectedBoard.id);
+    } else {
+      fetchBoards();
+    }
+  }, [selectedBoard?.id, fetchColumns, fetchMembers, fetchBoards]);
 
   // Utility functions
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'critical': return 'bg-red-100 text-red-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'critical': return isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-800';
+      case 'high': return isDarkMode ? 'bg-orange-900 text-orange-300' : 'bg-orange-100 text-orange-800';
+      case 'medium': return isDarkMode ? 'bg-yellow-900 text-yellow-300' : 'bg-yellow-100 text-yellow-800';
+      case 'low': return isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-800';
+      default: return isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -181,20 +264,32 @@ const BoardDetail: React.FC = () => {
     return new Date(date).toLocaleDateString();
   };
 
-  // Calculate stats
-  const totalTasks = Object.values(boardTasks).reduce((total, tasks) => total + tasks.length, 0);
-  const completedTasks = Object.values(boardTasks).reduce((total, tasks) => 
-    total + tasks.filter(task => task.status === 'completed').length, 0
-  );
+  // Calculate stats with proper null checks
+  const currentBoardColumns = boardColumns?.filter(col => col.board_id === selectedBoard?.id) || [];
+  const currentBoardTasks = currentBoardColumns.reduce((acc, column) => {
+    const columnTasks = boardTasks[column.id] || [];
+    return [...acc, ...columnTasks];
+  }, [] as any[]);
+  
+  const totalTasks = currentBoardTasks.length;
+  const completedTasks = currentBoardTasks.filter(task => task.status === 'completed').length;
 
   // Loading state
-  if (isLoadingBoard || loading) {
+  const isLoading = !isInitialized || boardsLoading || columnsLoading;
+  
+  if (isLoading) {
     return (
       <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <div className="relative">
+            <Loader2 className={`w-12 h-12 animate-spin ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+            <div className="absolute inset-0 rounded-full border-2 border-blue-200 dark:border-blue-800"></div>
+          </div>
+          <p className={`mt-4 text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             Loading board...
+          </p>
+          <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Please wait while we fetch your data
           </p>
         </div>
       </div>
@@ -202,6 +297,7 @@ const BoardDetail: React.FC = () => {
   }
 
   // Error state
+  const error = boardsError || columnsError;
   if (error) {
     return (
       <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
@@ -225,7 +321,7 @@ const BoardDetail: React.FC = () => {
               Back to Boards
             </button>
             <button
-              onClick={() => fetchBoards()}
+              onClick={handleRetry}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
               Retry
@@ -274,8 +370,8 @@ const BoardDetail: React.FC = () => {
               onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
               className={`w-full px-3 py-2 text-sm rounded border ${
                 isDarkMode 
-                  ? 'bg-gray-700 border-gray-600 text-white' 
-                  : 'bg-white border-gray-300 text-gray-900'
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
               } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
               placeholder="Task title..."
             />
@@ -285,8 +381,8 @@ const BoardDetail: React.FC = () => {
               onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
               className={`w-full px-3 py-2 text-sm rounded border ${
                 isDarkMode 
-                  ? 'bg-gray-700 border-gray-600 text-white' 
-                  : 'bg-white border-gray-300 text-gray-900'
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
               } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
               placeholder="Task description..."
               rows={2}
@@ -351,7 +447,9 @@ const BoardDetail: React.FC = () => {
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
-          <h4 className="font-medium text-sm leading-tight flex-1 pr-2">{task.title}</h4>
+          <h4 className={`font-medium text-sm leading-tight flex-1 pr-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            {task.title}
+          </h4>
           <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={(e) => {
@@ -371,7 +469,11 @@ const BoardDetail: React.FC = () => {
                 e.stopPropagation();
                 handleDeleteTask(task.id);
               }}
-              className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
+              className={`p-1 rounded ${
+                isDarkMode 
+                  ? 'hover:bg-red-900 text-gray-400 hover:text-red-300' 
+                  : 'hover:bg-red-100 text-gray-400 hover:text-red-600'
+              } transition-colors`}
             >
               <Trash2 className="w-3 h-3" />
             </button>
@@ -409,14 +511,18 @@ const BoardDetail: React.FC = () => {
               {task.task_assignees.slice(0, 3).map((assignee: any, index: number) => (
                 <div 
                   key={index} 
-                  className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs border-2 border-white"
+                  className={`w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs border-2 ${
+                    isDarkMode ? 'border-gray-800' : 'border-white'
+                  }`}
                   title={assignee.profiles?.full_name || 'User'}
                 >
                   {assignee.profiles?.full_name?.charAt(0) || 'U'}
                 </div>
               ))}
               {task.task_assignees.length > 3 && (
-                <div className="w-6 h-6 rounded-full bg-gray-500 flex items-center justify-center text-white text-xs border-2 border-white">
+                <div className={`w-6 h-6 rounded-full bg-gray-500 flex items-center justify-center text-white text-xs border-2 ${
+                  isDarkMode ? 'border-gray-800' : 'border-white'
+                }`}>
                   +{task.task_assignees.length - 3}
                 </div>
               )}
@@ -495,16 +601,16 @@ const BoardDetail: React.FC = () => {
               <div className="flex items-center space-x-2">
                 {/* Members */}
                 <div className="flex -space-x-2">
-                  {boardMembers.slice(0, 3).map((member, index) => (
+                  {(boardMembers || []).slice(0, 3).map((member, index) => (
                     <div 
-                      key={member.id}
+                      key={member.id || index}
                       className={`w-8 h-8 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} rounded-full flex items-center justify-center text-xs font-medium border-2 ${isDarkMode ? 'border-gray-800' : 'border-white'}`}
-                      title={member.profiles.full_name || member.profiles.email}
+                      title={member.profiles?.full_name || member.profiles?.email}
                     >
-                      {member.profiles.full_name?.charAt(0) || member.profiles.email.charAt(0)}
+                      {member.profiles?.full_name?.charAt(0) || member.profiles?.email?.charAt(0) || 'U'}
                     </div>
                   ))}
-                  {boardMembers.length > 3 && (
+                  {(boardMembers || []).length > 3 && (
                     <div className={`w-8 h-8 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'} rounded-full flex items-center justify-center text-xs font-medium border-2 ${isDarkMode ? 'border-gray-800' : 'border-white'}`}>
                       +{boardMembers.length - 3}
                     </div>
@@ -514,6 +620,7 @@ const BoardDetail: React.FC = () => {
                 <button
                   onClick={handleAddMember}
                   className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
+                  title="Add member"
                 >
                   <Users className="w-4 h-4" />
                 </button>
@@ -548,36 +655,6 @@ const BoardDetail: React.FC = () => {
               </div>
               <div className="ml-3">
                 <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Total Tasks
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border`}>
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">{completedTasks}</span>
-                </div>
-              </div>
-              <div className="ml-3">
-                <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Completed
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border`}>
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">{boardMembers.length}</span>
-                </div>
-              </div>
-              <div className="ml-3">
-                <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Team Members
                 </p>
               </div>
@@ -604,24 +681,29 @@ const BoardDetail: React.FC = () => {
 
         {/* Kanban Board */}
         <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl border p-6`}>
-          {columnsLoading ? (
+          {columnsLoading && !currentBoardColumns.length ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
-              <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading columns...</span>
+              <div className="relative">
+                <Loader2 className={`w-8 h-8 animate-spin ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                <div className="absolute inset-0 rounded-full border-2 border-blue-200 dark:border-blue-800"></div>
+              </div>
+              <span className={`ml-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading columns...</span>
             </div>
-          ) : boardColumns && boardColumns.length > 0 ? (
+          ) : currentBoardColumns && currentBoardColumns.length > 0 ? (
             <div className="flex space-x-6 overflow-x-auto pb-4">
-              {boardColumns
+              {currentBoardColumns
                 .sort((a, b) => a.position - b.position)
                 .map((column) => (
                   <div key={column.id} className="flex-shrink-0 w-72">
                     <div className={`${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-4`}>
                       {/* Column Header */}
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-medium">{column.title}</h3>
+                        <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {column.title}
+                        </h3>
                         <div className="flex items-center space-x-2">
                           <span className={`text-xs px-2 py-1 rounded ${isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
-                            {boardTasks[column.id]?.length || 0}
+                            {(boardTasks[column.id] || []).length}
                           </span>
                           <button 
                             onClick={() => handleAddTask(column.id)}
@@ -635,10 +717,12 @@ const BoardDetail: React.FC = () => {
 
                       {/* Tasks */}
                       <div className="space-y-3 min-h-[200px]">
-                        {tasksLoading ? (
+                        {tasksLoading && !boardTasks[column.id] ? (
                           <div className="text-center py-4">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                            <span className="text-xs text-gray-500">Loading tasks...</span>
+                            <div className="relative">
+                              <Loader2 className={`w-4 h-4 animate-spin ${isDarkMode ? 'text-blue-400' : 'text-blue-600'} mx-auto mb-2`} />
+                            </div>
+                            <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading tasks...</span>
                           </div>
                         ) : boardTasks[column.id] && boardTasks[column.id].length > 0 ? (
                           boardTasks[column.id].map((task) => (

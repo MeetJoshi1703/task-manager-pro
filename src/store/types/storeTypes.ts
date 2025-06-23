@@ -104,9 +104,8 @@ export interface ColumnState {
   boardColumns: Column[];
   loading: boolean;
   error: string | null;
-  hasFetched: boolean; 
+  hasFetched: Record<string, boolean>; // Change to object tracking per board
 }
-
 export interface ColumnActions {
   fetchColumns: (boardId: string) => Promise<void>;
   createColumn: (boardId: string, columnData: CreateColumnData) => Promise<void>;

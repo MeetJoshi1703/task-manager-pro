@@ -16,28 +16,51 @@ export const createTaskSlice: StoreSlice<TaskState & TaskActions> = (set, get) =
   ...getInitialTaskState(),
   hasFetched: {}, // Add this
 
-  fetchTasks: async (columnId) => {
+fetchTasks: async (columnId) => {
     const state = get();
+    
+    // Prevent infinite loading - check if already loading or fetched for this column
     if (state.loading || state.hasFetched[columnId]) {
       console.log(`[Tasks] Already fetched or loading for column ${columnId}, skipping...`);
       return;
     }
+
     set(() => ({ loading: true, error: null }));
     
     try {
+      console.log(`[Tasks] Starting fetch for column: ${columnId}`);
       const tasks = await taskService.getTasksByColumn(columnId);
-      const validTasks = (tasks || []).filter(isValidTask);
+      
+      if (!Array.isArray(tasks)) {
+        console.warn(`[Tasks] Invalid API response for column ${columnId}: tasks is not an array`);
+        // Handle gracefully - set empty array
+        set((state) => ({
+          boardTasks: { ...state.boardTasks, [columnId]: [] },
+          loading: false,
+          hasFetched: { ...state.hasFetched, [columnId]: true },
+        }));
+        return;
+      }
+      
+      const validTasks = tasks.filter(isValidTask);
       
       set((state) => ({
-        boardTasks: { ...state.boardTasks, [columnId]: tasks },
+        boardTasks: { ...state.boardTasks, [columnId]: validTasks },
         loading: false,
         hasFetched: { ...state.hasFetched, [columnId]: true },
       }));
       
       logOperation('fetchTasks', { columnId, count: validTasks.length });
+      console.log(`[Tasks] Fetch completed successfully for column: ${columnId}`);
+      
     } catch (error: any) {
+      console.error(`[Tasks] Fetch failed for column: ${columnId}`, error);
       logError('fetchTasks', error);
-      handleApiError(error, get().logout, set);
+      set((state) => ({
+        error: error.message || 'Failed to fetch tasks',
+        loading: false,
+        hasFetched: { ...state.hasFetched, [columnId]: true }, // Mark as attempted even if failed
+      }));
     }
   },
 
@@ -45,8 +68,13 @@ export const createTaskSlice: StoreSlice<TaskState & TaskActions> = (set, get) =
     set(() => ({ loading: true, error: null }));
     
     try {
+      console.log('[Tasks] Starting fetch all tasks...');
       const response = await taskService.getAllTasks();
       const tasks = response.tasks || [];
+      
+      if (!Array.isArray(tasks)) {
+        throw new Error('Invalid API response: tasks is not an array');
+      }
       
       const tasksByColumn = tasks.reduce((acc: Record<string, any[]>, apiTask: any) => {
         if (!isValidTask(apiTask)) {
@@ -61,21 +89,34 @@ export const createTaskSlice: StoreSlice<TaskState & TaskActions> = (set, get) =
         return acc;
       }, {});
       
+      // Mark all columns as fetched
+      const fetchedColumns = Object.keys(tasksByColumn).reduce((acc, columnId) => {
+        acc[columnId] = true;
+        return acc;
+      }, {} as Record<string, boolean>);
+      
       set((state) => ({
         boardTasks: {
           ...state.boardTasks,
           ...tasksByColumn,
         },
         loading: false,
+        hasFetched: { ...state.hasFetched, ...fetchedColumns },
       }));
       
       logOperation('fetchAllTasks', { 
         totalTasks: tasks.length, 
         columns: Object.keys(tasksByColumn).length 
       });
+      console.log('[Tasks] Fetch all tasks completed successfully');
+      
     } catch (error: any) {
+      console.error('[Tasks] Fetch all tasks failed:', error);
       logError('fetchAllTasks', error);
-      handleApiError(error, get().logout, set);
+      set(() => ({
+        error: error.message || 'Failed to fetch all tasks',
+        loading: false,
+      }));
     }
   },
 

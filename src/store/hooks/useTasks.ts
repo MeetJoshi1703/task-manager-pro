@@ -6,7 +6,8 @@ export const useTasks = () => {
   const boardTasks = useBoardStore(state => state.boardTasks);
   const loading = useBoardStore(state => state.loading);
   const error = useBoardStore(state => state.error);
-  
+  const hasFetched = useBoardStore(state => state.hasFetched);
+
   // Actions
   const fetchTasks = useBoardStore(state => state.fetchTasks);
   const fetchAllTasks = useBoardStore(state => state.fetchAllTasks);
@@ -54,7 +55,7 @@ export const useTasks = () => {
     boardTasks,
     loading,
     error,
-    
+    hasFetched,
     // Actions
     fetchTasks,
     fetchAllTasks,

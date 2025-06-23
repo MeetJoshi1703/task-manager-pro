@@ -14,23 +14,36 @@ export const createColumnSlice: StoreSlice<ColumnState & ColumnActions> = (set, 
   // INITIAL STATE
   // ================================
   ...getInitialColumnState(),
-  hasFetched: false,
+  hasFetched: {}, // Change to object instead of boolean
 
   // ================================
   // COLUMN OPERATIONS
   // ================================
   fetchColumns: async (boardId) => {
-      const state = get();
-
+    const state = get();
+    
     set(() => ({ loading: true, error: null }));
-    if (state.loading || state.hasFetched) {
-      console.log('[Columns] Already fetched or loading, skipping...');
+    
+    // Check if already fetched for this specific board
+    if (state.loading || state.hasFetched[boardId]) {
+      console.log('[Columns] Already fetched for board or loading, skipping...', boardId);
       return;
     }
+    
     try {
       const columns = await columnService.getColumnsByBoard(boardId);
+      console.log('[Columns] Fetched columns:', columns);
       const validColumns = columns.filter(isValidColumn);
-      set(() => ({ boardColumns: columns, loading: false, hasFetched: true }));
+      console.log('[Columns] Valid columns:', validColumns);
+      
+      set((state) => ({ 
+        boardColumns: [
+          ...state.boardColumns.filter(c => c.board_id !== boardId), // Remove old columns for this board
+          ...columns
+        ],
+        loading: false, 
+        hasFetched: { ...state.hasFetched, [boardId]: true } // Track per board
+      }));
       
       logOperation('fetchColumns', { boardId, count: validColumns.length });
     } catch (error: any) {

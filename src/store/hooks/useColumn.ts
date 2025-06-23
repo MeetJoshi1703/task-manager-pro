@@ -6,7 +6,8 @@ export const useColumns = () => {
   const boardColumns = useBoardStore(state => state.boardColumns);
   const loading = useBoardStore(state => state.loading);
   const error = useBoardStore(state => state.error);
-  
+  const hasFetched = useBoardStore(state => state.hasFetched);
+
   // Actions
   const fetchColumns = useBoardStore(state => state.fetchColumns);
   const createColumn = useBoardStore(state => state.createColumn);
@@ -25,6 +26,7 @@ export const useColumns = () => {
     boardColumns,
     loading,
     error,
+    hasFetched,
     
     // Actions
     fetchColumns,
@@ -33,6 +35,7 @@ export const useColumns = () => {
     deleteColumn,
     reorderColumns,
     clearError,
+
     
     // Computed
     ...computed,
